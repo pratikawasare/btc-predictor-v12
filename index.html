@@ -56,34 +56,37 @@
             position: absolute;
             top: 0;
             right: 0;
-            width: 50px;
-            height: 25px;
+            width: 60px;
+            height: 30px;
             background: var(--bg-secondary);
-            border-radius: 25px;
+            border-radius: 30px;
             border: 2px solid var(--border-color);
             cursor: pointer;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            padding: 3px;
         }
         
-        .theme-toggle::after {
-            content: '🌙';
-            position: absolute;
-            top: 1px;
-            left: 2px;
-            width: 17px;
-            height: 17px;
+        .theme-toggle:hover {
+            border-color: var(--accent-primary);
+        }
+        
+        .theme-toggle-slider {
+            width: 22px;
+            height: 22px;
             background: var(--accent-primary);
             border-radius: 50%;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: 12px;
+            transform: translateX(0);
         }
         
-        body.light-mode .theme-toggle::after {
-            content: '☀️';
-            left: 27px;
+        body.light-mode .theme-toggle-slider {
+            transform: translateX(28px);
         }
         
         .logo {
@@ -558,7 +561,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="theme-toggle" id="themeToggle"></div>
+            <div class="theme-toggle" id="themeToggle">
+                <div class="theme-toggle-slider" id="themeSlider">🌙</div>
+            </div>
             <div class="logo">₿</div>
             <h1>BTC Predictor PRO</h1>
             <div class="version">
@@ -699,15 +704,36 @@
         let lastPriceForChange = 0;
         let firstPrice = 0;
         
-        // Theme toggle
+        // Theme toggle with proper chart update
         document.getElementById('themeToggle').addEventListener('click', () => {
             document.body.classList.toggle('light-mode');
-            localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+            const isLight = document.body.classList.contains('light-mode');
+            document.getElementById('themeSlider').textContent = isLight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            
+            // Update chart colors on theme change
+            if (chart) {
+                updateChartTheme();
+            }
         });
         
         // Load theme
         if (localStorage.getItem('theme') === 'light') {
             document.body.classList.add('light-mode');
+            document.getElementById('themeSlider').textContent = '☀️';
+        }
+        
+        function updateChartTheme() {
+            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+            const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+            const gridColor = document.body.classList.contains('light-mode') ? 'rgba(148, 163, 184, 0.2)' : 'rgba(148, 163, 184, 0.05)';
+            
+            chart.options.plugins.legend.labels.color = textColor;
+            chart.options.scales.x.grid.color = gridColor;
+            chart.options.scales.x.ticks.color = mutedColor;
+            chart.options.scales.y.grid.color = gridColor;
+            chart.options.scales.y.ticks.color = mutedColor;
+            chart.update();
         }
         
         // Sound toggle
@@ -725,6 +751,10 @@
         
         function initChart() {
             const ctx = document.getElementById('predictionChart').getContext('2d');
+            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+            const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+            const gridColor = document.body.classList.contains('light-mode') ? 'rgba(148, 163, 184, 0.2)' : 'rgba(148, 163, 184, 0.05)';
+            
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -759,7 +789,7 @@
                             display: true,
                             position: 'top',
                             labels: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary'),
+                                color: textColor,
                                 font: { size: 11, weight: 600 },
                                 usePointStyle: true
                             }
@@ -779,13 +809,13 @@
                     },
                     scales: {
                         x: {
-                            grid: { color: 'rgba(148, 163, 184, 0.05)' },
-                            ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 10 } }
+                            grid: { color: gridColor },
+                            ticks: { color: mutedColor, font: { size: 10 } }
                         },
                         y: {
-                            grid: { color: 'rgba(148, 163, 184, 0.05)' },
+                            grid: { color: gridColor },
                             ticks: {
-                                color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'),
+                                color: mutedColor,
                                 callback: function(value) {
                                     return '$' + value.toLocaleString('en-US');
                                 }
@@ -1035,10 +1065,9 @@
                     const predDir = pred.price > pred.currentPrice ? 'up' : 'down';
                     const correct = actDir === predDir;
                     
-                    // Update simulated profit
                     if (correct) {
                         const priceDiff = Math.abs(curr - pred.currentPrice);
-                        simulatedProfit += priceDiff * 0.01; // Simulate 0.01 BTC per trade
+                        simulatedProfit += priceDiff * 0.01;
                     } else {
                         const priceDiff = Math.abs(curr - pred.currentPrice);
                         simulatedProfit -= priceDiff * 0.01;
@@ -1089,7 +1118,6 @@
             if (firstPrice === 0) firstPrice = price;
             if (lastPriceForChange === 0) lastPriceForChange = price;
             
-            // Price change
             const priceChangePercent = ((price - lastPriceForChange) / lastPriceForChange) * 100;
             const priceChangeEl = document.getElementById('priceChange');
             priceChangeEl.textContent = `${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`;
@@ -1099,7 +1127,6 @@
             document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
             document.getElementById('dataPoints').textContent = history.length;
             
-            // Volatility
             const vol = calculateVolatility(history);
             const volPercent = Math.min(100, vol * 10);
             document.getElementById('volatilityFill').style.width = volPercent + '%';
@@ -1113,7 +1140,6 @@
                 document.getElementById('direction').textContent = prediction.direction;
                 document.getElementById('direction').style.color = prediction.change > 0 ? '#10b981' : '#ef4444';
                 
-                // Confidence
                 const confPercent = prediction.confidence;
                 document.getElementById('confidenceFill').style.width = confPercent + '%';
                 document.getElementById('confidenceText').textContent = `Confidence: ${confPercent.toFixed(0)}%`;
@@ -1130,14 +1156,12 @@
                 document.getElementById('status').textContent = `🧠 Collecting... (${history.length}/${MIN_DATA_POINTS})`;
             }
             
-            // Streak
             if (currentStreak.count > 0) {
                 const streakEl = document.getElementById('streakBadge');
                 streakEl.className = `streak-badge ${currentStreak.type === 'win' ? 'streak-win' : 'streak-loss'}`;
                 streakEl.textContent = `${currentStreak.count} ${currentStreak.type === 'win' ? '🔥 Win' : '❄️ Loss'} Streak`;
             }
             
-            // Profit
             const profitPercent = ((simulatedProfit + firstPrice) / firstPrice - 1) * 100;
             const profitEl = document.getElementById('profitValue');
             profitEl.textContent = `$${simulatedProfit.toFixed(2)}`;
