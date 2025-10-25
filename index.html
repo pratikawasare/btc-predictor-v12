@@ -229,6 +229,7 @@
             padding: 20px;
             border-radius: 10px;
             text-align: center;
+            margin-bottom: 20px;
         }
         
         .footer {
@@ -255,7 +256,12 @@
         
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p style="color: #666;">Initializing advanced prediction system...</p>
+            <p style="color: #666;">Fetching Bitcoin price data...</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <strong>⚠️ Connection Error</strong><br>
+            <span id="errorMessage"></span>
         </div>
         
         <div id="content" style="display: none;">
@@ -263,6 +269,7 @@
                 <div class="price-box">
                     <div class="box-label">Current Price</div>
                     <div class="box-value" id="currentPrice">$--</div>
+                    <div style="font-size: 11px; opacity: 0.8; margin-top: 8px;" id="lastUpdate">--</div>
                 </div>
                 <div class="prediction-box-main">
                     <div class="box-label">5-Min Prediction</div>
@@ -310,10 +317,6 @@
             </div>
         </div>
         
-        <div id="error" class="error" style="display: none;">
-            ⚠️ Unable to fetch Bitcoin data. Please refresh the page.
-        </div>
-        
         <div class="footer">
             Deployed on Vercel • Advanced AI with 8 Technical Indicators • Free Forever
         </div>
@@ -321,11 +324,10 @@
     
     <script>
         // Configuration
-        const PYTH_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
-        const UPDATE_INTERVAL = 120000; // 2 minutes
-        const PREDICTION_WINDOW = 5; // 5 minutes ahead
+        const UPDATE_INTERVAL = 10000; // 10 seconds for testing, change to 120000 for production
+        const PREDICTION_WINDOW = 5;
         const MIN_DATA_POINTS = 25;
-        const STABILITY_FACTOR = 0.25; // Low for responsiveness
+        const STABILITY_FACTOR = 0.25;
         const LEARNING_RATE = 0.15;
         
         // Data structures
@@ -333,46 +335,78 @@
         let predictions = [];
         let evaluatedPredictions = [];
         let modelWeights = {
-            trend: 16,
-            momentum: 16,
-            rsi: 14,
-            macd: 14,
-            ema: 13,
-            volatility: 10,
-            volume: 10,
-            stochastic: 7
+            trend: 16, momentum: 16, rsi: 14, macd: 14,
+            ema: 13, volatility: 10, volume: 10, stochastic: 7
         };
         
-        // Fetch price
+        let fetchAttempts = 0;
+        const MAX_ATTEMPTS = 3;
+        
+        // Fetch price with multiple fallbacks
         async function fetchBTCPrice() {
+            fetchAttempts++;
+            
+            // Try CoinGecko first (no auth needed, CORS-friendly)
             try {
-                const response = await fetch(`https://hermes.pyth.network/api/latest_price_feeds?ids[]=${PYTH_ID}`);
-                const data = await response.json();
-                
-                if (data && data[0] && data[0].price) {
-                    return parseFloat(data[0].price.price) * Math.pow(10, data[0].price.expo);
+                console.log('Trying CoinGecko...');
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.bitcoin && data.bitcoin.usd) {
+                        console.log('✅ CoinGecko success:', data.bitcoin.usd);
+                        fetchAttempts = 0;
+                        return data.bitcoin.usd;
+                    }
                 }
-                
-                const binanceResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-                const binanceData = await binanceResponse.json();
-                return parseFloat(binanceData.price);
             } catch (error) {
-                console.error('Price fetch error:', error);
-                return null;
+                console.error('CoinGecko error:', error);
             }
+            
+            // Try Binance
+            try {
+                console.log('Trying Binance...');
+                const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.price) {
+                        console.log('✅ Binance success:', data.price);
+                        fetchAttempts = 0;
+                        return parseFloat(data.price);
+                    }
+                }
+            } catch (error) {
+                console.error('Binance error:', error);
+            }
+            
+            // Try Coinbase
+            try {
+                console.log('Trying Coinbase...');
+                const response = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.data && data.data.amount) {
+                        console.log('✅ Coinbase success:', data.data.amount);
+                        fetchAttempts = 0;
+                        return parseFloat(data.data.amount);
+                    }
+                }
+            } catch (error) {
+                console.error('Coinbase error:', error);
+            }
+            
+            console.error('❌ All APIs failed');
+            return null;
         }
         
-        // Technical indicators
+        // Technical indicators (same as before)
         function calculateRSI(prices, period = 14) {
             if (prices.length < period + 1) return 50;
-            
             let gains = 0, losses = 0;
             for (let i = prices.length - period; i < prices.length; i++) {
                 const change = prices[i] - prices[i - 1];
                 if (change > 0) gains += change;
                 else losses += Math.abs(change);
             }
-            
             const avgGain = gains / period;
             const avgLoss = losses / period;
             const rs = avgGain / (avgLoss || 1);
@@ -381,10 +415,8 @@
         
         function calculateEMA(prices, period) {
             if (prices.length < period) return prices[prices.length - 1];
-            
             const k = 2 / (period + 1);
             let ema = prices.slice(0, period).reduce((a, b) => a + b) / period;
-            
             for (let i = period; i < prices.length; i++) {
                 ema = prices[i] * k + ema * (1 - k);
             }
@@ -392,25 +424,20 @@
         }
         
         function calculateMACD(prices) {
-            const ema12 = calculateEMA(prices, 12);
-            const ema26 = calculateEMA(prices, 26);
-            return ema12 - ema26;
+            return calculateEMA(prices, 12) - calculateEMA(prices, 26);
         }
         
         function calculateStochastic(prices, period = 14) {
             if (prices.length < period) return 50;
-            
             const recentPrices = prices.slice(-period);
             const high = Math.max(...recentPrices);
             const low = Math.min(...recentPrices);
             const current = prices[prices.length - 1];
-            
             return ((current - low) / (high - low || 1)) * 100;
         }
         
         function calculateVolatility(prices, period = 20) {
             if (prices.length < period) return 0;
-            
             const recentPrices = prices.slice(-period);
             const avg = recentPrices.reduce((a, b) => a + b) / period;
             const variance = recentPrices.reduce((sum, price) => sum + Math.pow(price - avg, 2), 0) / period;
@@ -419,28 +446,22 @@
         
         function detectRegime(prices) {
             if (prices.length < 15) return 'ranging';
-            
             const recent = prices.slice(-15);
             let upMoves = 0, downMoves = 0;
-            
             for (let i = 1; i < recent.length; i++) {
                 const change = ((recent[i] - recent[i-1]) / recent[i-1]) * 100;
                 if (change > 0.2) upMoves++;
                 else if (change < -0.2) downMoves++;
             }
-            
             const volatility = calculateVolatility(prices);
             const consistency = Math.max(upMoves, downMoves) / 14;
-            
             return (consistency > 0.65 && volatility > 0.5) ? 'trending' : 'ranging';
         }
         
         function calculateIndicators(prices) {
             if (prices.length < MIN_DATA_POINTS) return null;
-            
             const current = prices[prices.length - 1];
             const previous = prices[prices.length - 2];
-            
             return {
                 trend: ((current - previous) / previous) * 100,
                 momentum: prices.length >= 5 ? ((current - prices[prices.length - 5]) / prices[prices.length - 5]) * 100 : 0,
@@ -448,15 +469,13 @@
                 macd: calculateMACD(prices),
                 ema: calculateEMA(prices, 20),
                 volatility: calculateVolatility(prices),
-                volume: Math.random() * 10, // Placeholder
+                volume: Math.random() * 10,
                 stochastic: calculateStochastic(prices)
             };
         }
         
         function makePrediction(currentPrice, indicators, regime) {
             if (!indicators) return null;
-            
-            // Normalize indicators to -1 to 1 range
             const signals = {
                 trend: indicators.trend,
                 momentum: indicators.momentum * 0.8,
@@ -468,15 +487,11 @@
                 stochastic: (indicators.stochastic - 50) / 50
             };
             
-            // Regime-based multipliers
             const multipliers = regime === 'trending' ? 
                 { trend: 4.5, momentum: 3.5, rsi: 1.5, macd: 2, ema: 2, volatility: 1, volume: 1.2, stochastic: 1 } :
                 { trend: 2, momentum: 2, rsi: 3, macd: 1.5, ema: 1.5, volatility: 0.8, volume: 1, stochastic: 2.5 };
             
-            // Calculate weighted signal
-            let weightedSignal = 0;
-            let totalWeight = 0;
-            
+            let weightedSignal = 0, totalWeight = 0;
             for (const [indicator, signal] of Object.entries(signals)) {
                 const weight = modelWeights[indicator] * multipliers[indicator];
                 weightedSignal += signal * weight;
@@ -486,10 +501,8 @@
             const normalizedSignal = weightedSignal / totalWeight;
             const maxChange = regime === 'trending' ? 2.5 : 0.8;
             const predictedChange = normalizedSignal * maxChange;
-            
             let predictedPrice = currentPrice * (1 + predictedChange / 100);
             
-            // Apply stability factor
             if (predictions.length > 0) {
                 const lastPrediction = predictions[predictions.length - 1].price;
                 predictedPrice = predictedPrice * (1 - STABILITY_FACTOR) + lastPrediction * STABILITY_FACTOR;
@@ -514,22 +527,13 @@
                     const predictedDirection = pred.price > pred.currentPrice ? 'up' : 'down';
                     const correct = actualDirection === predictedDirection;
                     
-                    evaluatedPredictions.push({
-                        correct,
-                        regime: pred.regime,
-                        timestamp: pred.timestamp
-                    });
-                    
+                    evaluatedPredictions.push({ correct, regime: pred.regime, timestamp: pred.timestamp });
                     if (evaluatedPredictions.length > 50) evaluatedPredictions.shift();
                     
                     // Learning
                     if (correct) {
-                        // Increase weights slightly
-                        for (const key in modelWeights) {
-                            modelWeights[key] *= (1 + LEARNING_RATE * 0.1);
-                        }
+                        for (const key in modelWeights) modelWeights[key] *= (1 + LEARNING_RATE * 0.1);
                     } else {
-                        // Adjust based on regime
                         if (pred.regime === 'trending') {
                             modelWeights.trend *= (1 - LEARNING_RATE * 0.2);
                             modelWeights.momentum *= (1 - LEARNING_RATE * 0.2);
@@ -539,13 +543,11 @@
                         }
                     }
                     
-                    // Normalize weights and enforce bounds
                     let total = Object.values(modelWeights).reduce((a, b) => a + b);
                     for (const key in modelWeights) {
                         modelWeights[key] = (modelWeights[key] / total) * 100;
                         modelWeights[key] = Math.max(3, Math.min(25, modelWeights[key]));
                     }
-                    
                     return false;
                 }
                 return true;
@@ -553,11 +555,12 @@
         }
         
         function updateUI(currentPrice, prediction) {
-            document.getElementById('currentPrice').textContent = `$${currentPrice.toFixed(2)}`;
+            document.getElementById('currentPrice').textContent = `$${currentPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
             document.getElementById('dataPoints').textContent = history.length;
             
             if (prediction) {
-                document.getElementById('predictedPrice').textContent = `$${prediction.price.toFixed(2)}`;
+                document.getElementById('predictedPrice').textContent = `$${prediction.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 document.getElementById('direction').textContent = prediction.direction;
                 document.getElementById('direction').style.color = prediction.change > 0 ? '#28a745' : '#dc3545';
                 
@@ -570,7 +573,6 @@
                 document.getElementById('status').textContent = `🧠 Collecting data... (${history.length}/${MIN_DATA_POINTS})`;
             }
             
-            // Update stats
             const correct = evaluatedPredictions.filter(p => p.correct).length;
             const total = evaluatedPredictions.length;
             const accuracy = total > 0 ? (correct / total * 100) : 0;
@@ -578,7 +580,6 @@
             document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
             document.getElementById('totalPredictions').textContent = total;
             
-            // Update weights display
             const weightsHTML = Object.entries(modelWeights)
                 .sort((a, b) => b[1] - a[1])
                 .map(([key, value]) => `
@@ -594,7 +595,6 @@
                 `).join('');
             document.getElementById('weightsDisplay').innerHTML = weightsHTML;
             
-            // Update log
             if (evaluatedPredictions.length > 0) {
                 const logHTML = evaluatedPredictions.slice(-10).reverse().map(pred => `
                     <div class="log-entry ${pred.correct ? 'correct' : 'incorrect'}">
@@ -610,6 +610,7 @@
                 const price = await fetchBTCPrice();
                 
                 if (price) {
+                    console.log('✅ Got price:', price);
                     history.push(price);
                     if (history.length > 100) history.shift();
                     
@@ -620,29 +621,31 @@
                     const prediction = indicators ? makePrediction(price, indicators, regime) : null;
                     
                     if (prediction) {
-                        predictions.push({
-                            ...prediction,
-                            currentPrice: price
-                        });
+                        predictions.push({ ...prediction, currentPrice: price });
                     }
                     
                     updateUI(price, prediction);
                     
                     document.getElementById('loading').style.display = 'none';
-                    document.getElementById('content').style.display = 'block';
                     document.getElementById('error').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
                 } else {
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('error').style.display = 'block';
+                    throw new Error('All price APIs failed');
                 }
             } catch (error) {
                 console.error('Update error:', error);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
+                document.getElementById('errorMessage').textContent = `Failed to fetch Bitcoin price after ${fetchAttempts} attempts. Retrying...`;
+                
+                if (fetchAttempts >= MAX_ATTEMPTS) {
+                    document.getElementById('errorMessage').textContent = 'Unable to connect to price APIs. Please check your internet connection and refresh the page.';
+                }
             }
         }
         
         // Initialize
+        console.log('🚀 Starting BTC Predictor...');
         update();
         setInterval(update, UPDATE_INTERVAL);
     </script>
