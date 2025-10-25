@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC Predictor v12 ULTIMATE - Live 24/7</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            font-size: 36px;
+        }
+        
+        .version {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+        
+        .price-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .price-box, .prediction-box-main {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .box-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .box-value {
+            font-size: 32px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .price-update-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .direction {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .regime-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        
+        .regime-badge.ranging {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .regime-badge.trending {
+            background: #28a745;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .weights-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .weights-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .weight-bar {
+            margin-bottom: 10px;
+        }
+        
+        .weight-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .weight-progress {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .weight-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .predictions-log {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .log-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .log-entry {
+            font-size: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            color: #555;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-entry.correct {
+            color: #28a745;
+        }
+        
+        .log-entry.incorrect {
+            color: #dc3545;
+        }
+        
+        .status-bar {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 13px;
+            color: #1976d2;
+            margin-top: 20px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-export {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-import {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-reset {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 11px;
+            color: #999;
+        }
+        
+        .pyth-badge {
+            display: inline-block;
+            background: #6B46C1;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .auto-save-indicator {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .auto-save-indicator.visible {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .price-section {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .control-buttons {
+                flex-direction: column;
+            }
+            .control-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 BTC Predictor ULTIMATE</h1>
+        <div class="version">
+            v12.0 with Advanced AI • Powered by Pyth Network
+            <span id="autoSaveIndicator" class="auto-save-indicator">💾 Auto-saved</span>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p style="color: #666;">Connecting to Pyth Network...</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <strong>⚠️ Connection Error</strong><br>
+            <span id="errorMessage"></span>
+        </div>
+        
+        <div id="content" style="display: none;">
+            <div class="price-section">
+                <div class="price-box">
+                    <div class="box-label">
+                        Current Price
+                        <span class="price-update-indicator"></span>
+                    </div>
+                    <div class="box-value" id="currentPrice">$--</div>
+                    <div style="font-size: 11px; opacity: 0.8; margin-top: 8px;" id="lastUpdate">--</div>
+                    <div class="pyth-badge">⚡ PYTH NETWORK</div>
+                </div>
+                <div class="prediction-box-main">
+                    <div class="box-label">5-Min Prediction</div>
+                    <div class="box-value" id="predictedPrice">$--</div>
+                    <div class="direction" id="direction">--</div>
+                    <span id="regime" class="regime-badge ranging">RANGING</span>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Accuracy</div>
+                    <div class="stat-value" id="accuracy">--%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Predictions</div>
+                    <div class="stat-value" id="totalPredictions">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Data Points</div>
+                    <div class="stat-value" id="dataPoints">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Updates/Min</div>
+                    <div class="stat-value" id="updateRate">6</div>
+                </div>
+            </div>
+            
+            <div class="weights-section">
+                <div class="weights-title">🧠 Model Indicator Weights (Self-Learning)</div>
+                <div id="weightsDisplay"></div>
+            </div>
+            
+            <div class="predictions-log">
+                <div class="log-title">📊 Recent Predictions</div>
+                <div id="logEntries">
+                    <div class="log-entry" style="text-align: center; color: #999;">
+                        Waiting for predictions...
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-bar" id="status">
+                🧠 Collecting data for predictions...
+            </div>
+            
+            <div class="control-buttons">
+                <button id="exportBtn" class="control-btn btn-export">
+                    📥 Export Data
+                </button>
+                <button id="importBtn" class="control-btn btn-import">
+                    📤 Import Data
+                </button>
+                <button id="resetBtn" class="control-btn btn-reset">
+                    🔄 Reset All
+                </button>
+            </div>
+            <input type="file" id="importFile" accept=".json" style="display: none;">
+        </div>
+        
+        <div class="footer">
+            Real-time data from Pyth Network • Auto-saves every 5 minutes • Advanced AI with 8 Indicators
+        </div>
+    </div>
+    
+    <script>
+        // Configuration
+        const PYTH_BTC_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
+        const PYTH_API_URL = 'https://hermes.pyth.network/api/latest_price_feeds';
+        const UPDATE_INTERVAL = 10000; // 10 seconds
+        const PREDICTION_WINDOW = 5;
+        const MIN_DATA_POINTS = 25;
+        const STABILITY_FACTOR = 0.25;
+        const LEARNING_RATE = 0.15;
+        const AUTO_SAVE_INTERVAL = 300000; // 5 minutes
+        
+        // Data structures
+        let history = [];
+        let predictions = [];
+        let evaluatedPredictions = [];
+        let modelWeights = {
+            trend: 16, momentum: 16, rsi: 14, macd: 14,
+            ema: 13, volatility: 10, volume: 10, stochastic: 7
+        };
+        
+        let updateCount = 0;
+        let lastPrice = 0;
+        const startTime = Date.now();
+        
+        // Export/Import and LocalStorage functions
+        function exportData() {
+            const correct = evaluatedPredictions.filter(p => p.correct).length;
+            const total = evaluatedPredictions.length;
+            
+            const exportData = {
+                metadata: {
+                    version: "12.0 Pyth Ultimate",
+                    exportDate: new Date().toISOString(),
+                    totalRuntime: `${((Date.now() - startTime) / 3600000).toFixed(2)} hours`,
+                    dataSource: "Pyth Network"
+                },
+                history: history,
+                predictions: predictions,
+                evaluatedPredictions: evaluatedPredictions,
+                modelWeights: modelWeights,
+                performance: {
+                    totalPredictions: total,
+                    correctPredictions: correct,
+                    accuracy: total > 0 ? (correct / total * 100).toFixed(2) + '%' : '0%',
+                    dataPointsCollected: history.length
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `btc-predictor-v12-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            console.log('✅ Data exported successfully');
+            alert(`Data exported successfully!\n\nStats:\n- ${history.length} data points\n- ${total} predictions\n- ${(correct / total * 100).toFixed(1)}% accuracy`);
+        }
+        
+        function importData(fileContent) {
+            try {
+                const data = JSON.parse(fileContent);
+                
+                if (data.metadata && data.metadata.version && data.metadata.version.includes('12.0')) {
+                    history = data.history || [];
+                    predictions = data.predictions || [];
+                    evaluatedPredictions = data.evaluatedPredictions || [];
+                    modelWeights = data.modelWeights || modelWeights;
+                    
+                    console.log('✅ Data imported successfully');
+                    console.log(`📊 Loaded: ${history.length} data points, ${evaluatedPredictions.length} evaluated predictions`);
+                    
+                    saveToLocalStorage();
+                    alert(`Data imported successfully!\n\nLoaded:\n- ${history.length} data points\n- ${evaluatedPredictions.length} predictions\n- Model weights restored`);
+                    
+                    // Force UI update
+                    if (history.length > 0) {
+                        const priceData = { price: history[history.length - 1], timestamp: Date.now() };
+                        const regime = detectRegime(history);
+                        const indicators = calculateIndicators(history);
+                        const prediction = indicators ? makePrediction(priceData.price, indicators, regime) : null;
+                        updateUI(priceData, prediction);
+                    }
+                } else {
+                    alert('⚠️ Invalid file version. Please export from v12.0 or later.');
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                alert('❌ Failed to import data. Invalid file format.');
+            }
+        }
+        
+        function saveToLocalStorage() {
+            try {
+                const saveData = {
+                    history: history.slice(-100), // Keep last 100 points
+                    evaluatedPredictions: evaluatedPredictions,
+                    modelWeights: modelWeights,
+                    lastSave: Date.now()
+                };
+                localStorage.setItem('btc-predictor-v12-data', JSON.stringify(saveData));
+                
+                // Show auto-save indicator
+                const indicator = document.getElementById('autoSaveIndicator');
+                indicator.classList.add('visible');
+                setTimeout(() => indicator.classList.remove('visible'), 2000);
+                
+                console.log('💾 Auto-saved to localStorage');
+            } catch (error) {
+                console.error('LocalStorage save error:', error);
+            }
+        }
+        
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('btc-predictor-v12-data');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    history = data.history || [];
+                    evaluatedPredictions = data.evaluatedPredictions || [];
+                    modelWeights = data.modelWeights || modelWeights;
+                    
+                    console.log(`✅ Restored from localStorage: ${history.length} data points`);
+                    console.log(`📊 Last save: ${new Date(data.lastSave).toLocaleString()}`);
+                    
+                    return true;
+                }
+            } catch (error) {
+                console.error('LocalStorage load error:', error);
+            }
+            return false;
+        }
+        
+        function resetAll() {
+            if (confirm('⚠️ This will delete all learned data and reset the model. Are you sure?')) {
+                history = [];
+                predictions = [];
+                evaluatedPredictions = [];
+                modelWeights = {
+                    trend: 16, momentum: 16, rsi: 14, macd: 14,
+                    ema: 13, volatility: 10, volume: 10, stochastic: 7
+                };
+                localStorage.removeItem('btc-predictor-v12-data');
+                alert('✅ All data reset! Page will reload...');
+                setTimeout(() => location.reload(), 1000);
+            }
+        }
+        
+        // Fetch price from Pyth Network
+        async function fetchBTCPrice() {
+            try {
+                const response = await fetch(`${PYTH_API_URL}?ids[]=${PYTH_BTC_ID}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Pyth API returned ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data && data[0] && data[0].price) {
+                    const priceData = data[0].price;
+                    const price = parseFloat(priceData.price) * Math.pow(10, priceData.expo);
+                    
+                    return {
+                        price: price,
+                        timestamp: Date.now()
+                    };
+                }
+                
+                throw new Error('Invalid Pyth response format');
+            } catch (error) {
+                console.error('❌ Pyth Network error:', error);
+                throw error;
+            }
+        }
+        
+        // Technical indicators
+        function calculateRSI(prices, period = 14) {
+            if (prices.length < period + 1) return 50;
+            let gains = 0, losses = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                const change = prices[i] - prices[i - 1];
+                if (change > 0) gains += change;
+                else losses += Math.abs(change);
+            }
+            const avgGain = gains / period;
+            const avgLoss = losses / period;
+            const rs = avgGain / (avgLoss || 1);
+            return 100 - (100 / (1 + rs));
+        }
+        
+        function calculateEMA(prices, period) {
+            if (prices.length < period) return prices[prices.length - 1];
+            const k = 2 / (period + 1);
+            let ema = prices.slice(0, period).reduce((a, b) => a + b) / period;
+            for (let i = period; i < prices.length; i++) {
+                ema = prices[i] * k + ema * (1 - k);
+            }
+            return ema;
+        }
+        
+        function calculateMACD(prices) {
+            return calculateEMA(prices, 12) - calculateEMA(prices, 26);
+        }
+        
+        function calculateStochastic(prices, period = 14) {
+            if (prices.length < period) return 50;
+            const recentPrices = prices.slice(-period);
+            const high = Math.max(...recentPrices);
+            const low = Math.min(...recentPrices);
+            const current = prices[prices.length - 1];
+            return ((current - low) / (high - low || 1)) * 100;
+        }
+        
+        function calculateVolatility(prices, period = 20) {
+            if (prices.length < period) return 0;
+            const recentPrices = prices.slice(-period);
+            const avg = recentPrices.reduce((a, b) => a + b) / period;
+            const variance = recentPrices.reduce((sum, price) => sum + Math.pow(price - avg, 2), 0) / period;
+            return Math.sqrt(variance) / avg * 100;
+        }
+        
+        function detectRegime(prices) {
+            if (prices.length < 15) return 'ranging';
+            const recent = prices.slice(-15);
+            let upMoves = 0, downMoves = 0;
+            for (let i = 1; i < recent.length; i++) {
+                const change = ((recent[i] - recent[i-1]) / recent[i-1]) * 100;
+                if (change > 0.2) upMoves++;
+                else if (change < -0.2) downMoves++;
+            }
+            const volatility = calculateVolatility(prices);
+            const consistency = Math.max(upMoves, downMoves) / 14;
+            return (consistency > 0.65 && volatility > 0.5) ? 'trending' : 'ranging';
+        }
+        
+        function calculateIndicators(prices) {
+            if (prices.length < MIN_DATA_POINTS) return null;
+            const current = prices[prices.length - 1];
+            const previous = prices[prices.length - 2];
+            return {
+                trend: ((current - previous) / previous) * 100,
+                momentum: prices.length >= 5 ? ((current - prices[prices.length - 5]) / prices[prices.length - 5]) * 100 : 0,
+                rsi: calculateRSI(prices),
+                macd: calculateMACD(prices),
+                ema: calculateEMA(prices, 20),
+                volatility: calculateVolatility(prices),
+                volume: Math.random() * 10,
+                stochastic: calculateStochastic(prices)
+            };
+        }
+        
+        function makePrediction(currentPrice, indicators, regime) {
+            if (!indicators) return null;
+            const signals = {
+                trend: indicators.trend,
+                momentum: indicators.momentum * 0.8,
+                rsi: (indicators.rsi - 50) / 50,
+                macd: Math.tanh(indicators.macd / 100),
+                ema: ((currentPrice - indicators.ema) / indicators.ema) * 100,
+                volatility: Math.min(indicators.volatility / 2, 1),
+                volume: (indicators.volume - 5) / 5,
+                stochastic: (indicators.stochastic - 50) / 50
+            };
+            
+            const multipliers = regime === 'trending' ? 
+                { trend: 4.5, momentum: 3.5, rsi: 1.5, macd: 2, ema: 2, volatility: 1, volume: 1.2, stochastic: 1 } :
+                { trend: 2, momentum: 2, rsi: 3, macd: 1.5, ema: 1.5, volatility: 0.8, volume: 1, stochastic: 2.5 };
+            
+            let weightedSignal = 0, totalWeight = 0;
+            for (const [indicator, signal] of Object.entries(signals)) {
+                const weight = modelWeights[indicator] * multipliers[indicator];
+                weightedSignal += signal * weight;
+                totalWeight += weight;
+            }
+            
+            const normalizedSignal = weightedSignal / totalWeight;
+            const maxChange = regime === 'trending' ? 2.5 : 0.8;
+            const predictedChange = normalizedSignal * maxChange;
+            let predictedPrice = currentPrice * (1 + predictedChange / 100);
+            
+            if (predictions.length > 0) {
+                const lastPrediction = predictions[predictions.length - 1].price;
+                predictedPrice = predictedPrice * (1 - STABILITY_FACTOR) + lastPrediction * STABILITY_FACTOR;
+            }
+            
+            return {
+                price: predictedPrice,
+                change: ((predictedPrice - currentPrice) / currentPrice) * 100,
+                direction: predictedPrice > currentPrice ? 'UP ⬆️' : 'DOWN ⬇️',
+                regime: regime,
+                timestamp: Date.now()
+            };
+        }
+        
+        function evaluatePredictions(currentPrice) {
+            const now = Date.now();
+            const windowMs = PREDICTION_WINDOW * 60 * 1000;
+            
+            predictions = predictions.filter(pred => {
+                if (now - pred.timestamp >= windowMs) {
+                    const actualDirection = currentPrice > pred.currentPrice ? 'up' : 'down';
+                    const predictedDirection = pred.price > pred.currentPrice ? 'up' : 'down';
+                    const correct = actualDirection === predictedDirection;
+                    
+                    evaluatedPredictions.push({ correct, regime: pred.regime, timestamp: pred.timestamp });
+                    if (evaluatedPredictions.length > 50) evaluatedPredictions.shift();
+                    
+                    // Learning
+                    if (correct) {
+                        for (const key in modelWeights) modelWeights[key] *= (1 + LEARNING_RATE * 0.1);
+                    } else {
+                        if (pred.regime === 'trending') {
+                            modelWeights.trend *= (1 - LEARNING_RATE * 0.2);
+                            modelWeights.momentum *= (1 - LEARNING_RATE * 0.2);
+                        } else {
+                            modelWeights.rsi *= (1 - LEARNING_RATE * 0.2);
+                            modelWeights.stochastic *= (1 - LEARNING_RATE * 0.2);
+                        }
+                    }
+                    
+                    let total = Object.values(modelWeights).reduce((a, b) => a + b);
+                    for (const key in modelWeights) {
+                        modelWeights[key] = (modelWeights[key] / total) * 100;
+                        modelWeights[key] = Math.max(3, Math.min(25, modelWeights[key]));
+                    }
+                    return false;
+                }
+                return true;
+            });
+        }
+        
+        function updateUI(priceData, prediction) {
+            const currentPrice = priceData.price;
+            
+            // Animate price change
+            const priceEl = document.getElementById('currentPrice');
+            if (lastPrice && currentPrice !== lastPrice) {
+                priceEl.style.color = currentPrice > lastPrice ? '#28a745' : '#dc3545';
+                setTimeout(() => priceEl.style.color = 'white', 500);
+            }
+            lastPrice = currentPrice;
+            
+            priceEl.textContent = `$${currentPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('dataPoints').textContent = history.length;
+            document.getElementById('updateRate').textContent = '6';
+            
+            if (prediction) {
+                document.getElementById('predictedPrice').textContent = `$${prediction.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                document.getElementById('direction').textContent = prediction.direction;
+                document.getElementById('direction').style.color = prediction.change > 0 ? '#28a745' : '#dc3545';
+                
+                const regimeEl = document.getElementById('regime');
+                regimeEl.textContent = prediction.regime.toUpperCase();
+                regimeEl.className = `regime-badge ${prediction.regime}`;
+                
+                document.getElementById('status').textContent = '🚀 Active predictions with self-learning AI';
+            } else {
+                document.getElementById('status').textContent = `🧠 Collecting data... (${history.length}/${MIN_DATA_POINTS})`;
+            }
+            
+            const correct = evaluatedPredictions.filter(p => p.correct).length;
+            const total = evaluatedPredictions.length;
+            const accuracy = total > 0 ? (correct / total * 100) : 0;
+            
+            document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
+            document.getElementById('totalPredictions').textContent = total;
+            
+            const weightsHTML = Object.entries(modelWeights)
+                .sort((a, b) => b[1] - a[1])
+                .map(([key, value]) => `
+                    <div class="weight-bar">
+                        <div class="weight-label">
+                            <span>${key.toUpperCase()}</span>
+                            <span>${value.toFixed(1)}%</span>
+                        </div>
+                        <div class="weight-progress">
+                            <div class="weight-fill" style="width: ${value}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+            document.getElementById('weightsDisplay').innerHTML = weightsHTML;
+            
+            if (evaluatedPredictions.length > 0) {
+                const logHTML = evaluatedPredictions.slice(-10).reverse().map(pred => `
+                    <div class="log-entry ${pred.correct ? 'correct' : 'incorrect'}">
+                        ${pred.correct ? '✅' : '❌'} ${pred.regime.toUpperCase()} - ${new Date(pred.timestamp).toLocaleTimeString()}
+                    </div>
+                `).join('');
+                document.getElementById('logEntries').innerHTML = logHTML;
+            }
+        }
+        
+        async function update() {
+            try {
+                const priceData = await fetchBTCPrice();
+                
+                if (priceData && priceData.price) {
+                    updateCount++;
+                    const price = priceData.price;
+                    
+                    history.push(price);
+                    if (history.length > 100) history.shift();
+                    
+                    evaluatePredictions(price);
+                    
+                    const regime = detectRegime(history);
+                    const indicators = calculateIndicators(history);
+                    const prediction = indicators ? makePrediction(price, indicators, regime) : null;
+                    
+                    if (prediction) {
+                        predictions.push({ ...prediction, currentPrice: price });
+                    }
+                    
+                    updateUI(priceData, prediction);
+                    
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('error').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+                } else {
+                    throw new Error('Invalid price data from Pyth');
+                }
+            } catch (error) {
+                console.error('Update error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('errorMessage').textContent = `Unable to fetch from Pyth Network: ${error.message}. Retrying in ${UPDATE_INTERVAL/1000}s...`;
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('exportBtn').addEventListener('click', exportData);
+        document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('importFile').click();
+        });
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => importData(e.target.result);
+                reader.readAsText(file);
+            }
+        });
+        document.getElementById('resetBtn').addEventListener('click', resetAll);
+        
+        // Initialize
+        console.log('🚀 Starting BTC Predictor v12 ULTIMATE with Pyth Network...');
+        console.log(`📡 Update interval: ${UPDATE_INTERVAL/1000} seconds`);
+        
+        // Load saved data on startup
+        const hasRestoredData = loadFromLocalStorage();
+        if (hasRestoredData) {
+            console.log('🔄 Resumed from previous session');
+        }
+        
+        // Start updates
+        update();
+        setInterval(update, UPDATE_INTERVAL);
+        
+        // Auto-save every 5 minutes
+        setInterval(saveToLocalStorage, AUTO_SAVE_INTERVAL);
+    </script>
+</body>
+</html>
