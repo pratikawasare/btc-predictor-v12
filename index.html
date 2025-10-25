@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC Predictor v13 ULTIMATE PRO</title>
+    <title>BTC Predictor v14 ENHANCED</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -149,7 +149,7 @@
         
         .confidence-fill {
             height: 100%;
-            background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+            background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
             transition: width 0.5s ease;
         }
         
@@ -484,9 +484,9 @@
     <div class="container">
         <div class="header">
             <div class="logo">₿</div>
-            <h1>BTC Predictor PRO</h1>
+            <h1>BTC Predictor v14</h1>
             <div class="version">
-                v13 Ultimate • All Features • Pyth Network
+                v14 Enhanced • 11 Indicators • Improved Algorithm • Pyth Network
                 <span id="autoSave" style="opacity: 0; transition: opacity 0.3s;">💾</span>
             </div>
         </div>
@@ -535,12 +535,21 @@
                     </div>
                     
                     <div class="card">
-                        <div class="section-title">⚡ Market Volatility</div>
+                        <div class="section-title">⚡ Market Volatility & Trend Strength</div>
                         <div class="volatility-meter">
                             <div class="volatility-bar">
                                 <div class="volatility-fill" id="volatilityFill" style="width: 0%"></div>
                             </div>
                             <div class="volatility-label" id="volatilityLabel">--</div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <div style="font-size: 10px; color: #64748b; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                                <span>TREND STRENGTH (ADX)</span>
+                                <span id="adxValue">--</span>
+                            </div>
+                            <div class="volatility-bar">
+                                <div class="volatility-fill" id="adxFill" style="width: 0%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -569,7 +578,7 @@
                     </div>
                     
                     <div class="card">
-                        <div class="section-title">🧠 Model Weights</div>
+                        <div class="section-title">🧠 Model Weights (11 Indicators)</div>
                         <div class="weights-section" id="weightsDisplay"></div>
                     </div>
                     
@@ -602,16 +611,17 @@
         const UPDATE_INTERVAL = 10000;
         const PREDICTION_WINDOW = 5;
         const MIN_DATA_POINTS = 25;
-        const STABILITY_FACTOR = 0.35;
-        const LEARNING_RATE = 0.05;
+        const STABILITY_FACTOR = 0.4; // INCREASED for more stable predictions
+        const LEARNING_RATE = 0.03; // REDUCED for less aggressive learning
         
         let history = [];
         let predictions = [];
         let evaluatedPredictions = [];
         let chartData = { labels: [], actual: [], predicted: [] };
         let modelWeights = {
-            trend: 12, momentum: 12, rsi: 12, macd: 12,
-            ema: 12, volatility: 12, volume: 12, stochastic: 12
+            trend: 9, momentum: 9, rsi: 9, macd: 9, ema: 9,
+            volatility: 9, volume: 9, stochastic: 9,
+            bb: 9, adx: 9, atr: 9  // NEW INDICATORS
         };
         let chart = null;
         const startTime = Date.now();
@@ -668,18 +678,12 @@
                         legend: {
                             display: true,
                             position: 'top',
-                            labels: {
-                                color: '#94a3b8',
-                                font: { size: 11, weight: 600 },
-                                usePointStyle: true
-                            }
+                            labels: { color: '#94a3b8', font: { size: 11, weight: 600 }, usePointStyle: true }
                         },
                         tooltip: {
                             backgroundColor: 'rgba(15, 23, 42, 0.95)',
                             titleColor: '#f59e0b',
                             bodyColor: '#e2e8f0',
-                            borderColor: 'rgba(245, 158, 11, 0.3)',
-                            borderWidth: 1,
                             callbacks: {
                                 label: function(context) {
                                     return context.dataset.label + ': $' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -688,10 +692,7 @@
                         }
                     },
                     scales: {
-                        x: {
-                            grid: { color: 'rgba(148, 163, 184, 0.05)' },
-                            ticks: { color: '#64748b', font: { size: 10 } }
-                        },
+                        x: { grid: { color: 'rgba(148, 163, 184, 0.05)' }, ticks: { color: '#64748b' } },
                         y: {
                             grid: { color: 'rgba(148, 163, 184, 0.05)' },
                             ticks: {
@@ -719,20 +720,86 @@
             if (chart) chart.update('none');
         }
         
+        // NEW: Bollinger Bands
+        function calculateBollingerBands(prices, period = 20) {
+            if (prices.length < period) return { upper: prices[prices.length-1], middle: prices[prices.length-1], lower: prices[prices.length-1] };
+            const recent = prices.slice(-period);
+            const sma = recent.reduce((a,b)=>a+b) / period;
+            const variance = recent.reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
+            const std = Math.sqrt(variance);
+            return { upper: sma + (std * 2), middle: sma, lower: sma - (std * 2) };
+        }
+        
+        // NEW: ADX (Trend Strength)
+        function calculateADX(prices, period = 14) {
+            if (prices.length < period + 1) return 25;
+            let plusDM = 0, minusDM = 0, tr = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                const high = prices[i];
+                const low = prices[i];
+                const prevClose = prices[i-1];
+                const trueRange = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+                tr += trueRange;
+                const upMove = high - prices[i-1];
+                const downMove = prices[i-1] - low;
+                if (upMove > downMove && upMove > 0) plusDM += upMove;
+                if (downMove > upMove && downMove > 0) minusDM += downMove;
+            }
+            const plusDI = (plusDM / tr) * 100;
+            const minusDI = (minusDM / tr) * 100;
+            const dx = Math.abs(plusDI - minusDI) / (plusDI + minusDI) * 100;
+            return dx || 25;
+        }
+        
+        // NEW: ATR (Average True Range)
+        function calculateATR(prices, period = 14) {
+            if (prices.length < period + 1) return 0;
+            let atr = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                const high = prices[i];
+                const low = prices[i];
+                const prevClose = prices[i-1];
+                const trueRange = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+                atr += trueRange;
+            }
+            return (atr / period) / prices[prices.length-1] * 100;
+        }
+        
+        // IMPROVED: Better confidence calculation
         function calculateConfidence(indicators, regime) {
-            if (!indicators) return 0;
+            if (!indicators) return 30;
+            
             const rsi = indicators.rsi;
             const vol = indicators.volatility;
-            let confidence = 50;
+            const adx = indicators.adx;
+            const current = history[history.length-1];
+            const bb = indicators.bb;
+            
+            let confidence = 40; // Start lower
+            
+            // ADX-based confidence (trend strength)
+            if (adx > 25) confidence += 15; // Strong trend
+            else confidence -= 10; // Weak trend
+            
+            // Bollinger Bands position
+            if (current > bb.upper || current < bb.lower) confidence += 10; // At extremes
+            
+            // RSI extremes
+            if (rsi > 70 || rsi < 30) confidence += 15;
+            else if (rsi > 45 && rsi < 55) confidence -= 15; // Neutral RSI
+            
+            // Volatility check
+            if (vol < 0.3) confidence -= 20; // Very low volatility = unreliable
+            if (vol > 1.0) confidence += 10; // Good volatility
+            
+            // Regime-specific
             if (regime === 'trending') {
-                if (Math.abs(indicators.trend) > 0.5) confidence += 20;
-                if (Math.abs(indicators.momentum) > 1) confidence += 15;
+                if (Math.abs(indicators.trend) > 0.5) confidence += 10;
             } else {
-                if (rsi > 70 || rsi < 30) confidence += 20;
-                if (vol < 0.5) confidence += 15;
+                if (vol < 0.5) confidence -= 15; // Ranging + low vol = hard to predict
             }
-            confidence += (100 - Math.abs(rsi - 50) * 2);
-            return Math.min(100, Math.max(0, confidence));
+            
+            return Math.min(85, Math.max(25, confidence)); // Cap between 25-85%
         }
         
         function updateStreak(correct) {
@@ -751,18 +818,18 @@
             const correct = evaluatedPredictions.filter(p => p.correct).length;
             const total = evaluatedPredictions.length;
             const data = {
-                metadata: { version: "13.0 PRO", exportDate: new Date().toISOString(), runtime: `${((Date.now() - startTime) / 3600000).toFixed(2)}h` },
+                metadata: { version: "14.0 Enhanced", exportDate: new Date().toISOString() },
                 history, predictions, evaluatedPredictions, modelWeights, chartData, simulatedProfit, currentStreak,
-                performance: { total, correct, accuracy: total > 0 ? (correct/total*100).toFixed(2) + '%' : '0%', dataPoints: history.length }
+                performance: { total, correct, accuracy: total > 0 ? (correct/total*100).toFixed(2) + '%' : '0%' }
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `btc-predictor-v13-pro-${Date.now()}.json`;
+            a.download = `btc-predictor-v14-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            alert(`✅ Exported!\n${history.length} points\n${total} predictions\n${(correct/total*100).toFixed(1)}% accuracy\nProfit: $${simulatedProfit.toFixed(2)}`);
+            alert(`✅ Exported!\n${history.length} points\n${total} predictions\n${(correct/total*100).toFixed(1)}% accuracy`);
         }
         
         function importData(content) {
@@ -778,7 +845,7 @@
                     currentStreak = data.currentStreak || { type: null, count: 0 };
                     if (chart) chart.update();
                     saveLocal();
-                    alert(`✅ Imported!\n${history.length} points\n${evaluatedPredictions.length} predictions`);
+                    alert(`✅ Imported!`);
                 }
             } catch (e) {
                 alert('❌ Import failed');
@@ -787,7 +854,7 @@
         
         function saveLocal() {
             try {
-                localStorage.setItem('btc-v13-pro', JSON.stringify({
+                localStorage.setItem('btc-v14', JSON.stringify({
                     history: history.slice(-100), evaluatedPredictions, modelWeights, chartData,
                     simulatedProfit, currentStreak, lastSave: Date.now()
                 }));
@@ -799,7 +866,7 @@
         
         function loadLocal() {
             try {
-                const saved = localStorage.getItem('btc-v13-pro');
+                const saved = localStorage.getItem('btc-v14');
                 if (saved) {
                     const data = JSON.parse(saved);
                     history = data.history || [];
@@ -818,9 +885,9 @@
             if (confirm('⚠️ Delete all data?')) {
                 history = []; predictions = []; evaluatedPredictions = [];
                 chartData = { labels: [], actual: [], predicted: [] };
-                modelWeights = { trend:12, momentum:12, rsi:12, macd:12, ema:12, volatility:12, volume:12, stochastic:12 };
+                modelWeights = { trend:9, momentum:9, rsi:9, macd:9, ema:9, volatility:9, volume:9, stochastic:9, bb:9, adx:9, atr:9 };
                 simulatedProfit = 0; currentStreak = { type: null, count: 0 };
-                localStorage.removeItem('btc-v13-pro');
+                localStorage.removeItem('btc-v14');
                 alert('✅ Reset!');
                 setTimeout(() => location.reload(), 1000);
             }
@@ -873,65 +940,92 @@
             return Math.sqrt(variance) / avg * 100;
         }
         
+        // IMPROVED: Better regime detection
         function detectRegime(p) {
-            if (p.length < 15) return 'ranging';
-            const recent = p.slice(-15);
-            let up = 0, down = 0;
-            for (let i = 1; i < recent.length; i++) {
-                const c = ((recent[i] - recent[i-1]) / recent[i-1]) * 100;
-                if (c > 0.15) up++;
-                else if (c < -0.15) down++;
-            }
+            if (p.length < 20) return 'ranging';
+            
+            const adx = calculateADX(p);
             const vol = calculateVolatility(p);
-            const consistency = Math.max(up, down) / 14;
-            const strength = Math.abs(up - down) / 14;
-            return (consistency > 0.5 && vol > 0.4 && strength > 0.3) ? 'trending' : 'ranging';
+            
+            // ADX > 25 = trending, ADX < 20 = ranging
+            if (adx > 25 && vol > 0.5) return 'trending';
+            return 'ranging';
         }
         
         function calculateIndicators(p) {
             if (p.length < MIN_DATA_POINTS) return null;
             const curr = p[p.length-1], prev = p[p.length-2];
+            const bb = calculateBollingerBands(p);
             return {
                 trend: ((curr - prev) / prev) * 100,
                 momentum: p.length >= 5 ? ((curr - p[p.length-5]) / p[p.length-5]) * 100 : 0,
-                rsi: calculateRSI(p), macd: calculateMACD(p), ema: calculateEMA(p, 20),
-                volatility: calculateVolatility(p), volume: Math.random() * 10, stochastic: calculateStochastic(p)
+                rsi: calculateRSI(p),
+                macd: calculateMACD(p),
+                ema: calculateEMA(p, 20),
+                volatility: calculateVolatility(p),
+                volume: Math.random() * 10,
+                stochastic: calculateStochastic(p),
+                bb: bb,
+                bbPosition: (curr - bb.lower) / (bb.upper - bb.lower) * 100, // 0-100%
+                adx: calculateADX(p),
+                atr: calculateATR(p)
             };
         }
         
         function makePrediction(curr, ind, regime) {
             if (!ind) return null;
+            
+            // Calculate signals for all 11 indicators
             const sig = {
-                trend: ind.trend, momentum: ind.momentum * 0.8, rsi: (ind.rsi - 50) / 50,
-                macd: Math.tanh(ind.macd / 100), ema: ((curr - ind.ema) / ind.ema) * 100,
-                volatility: Math.min(ind.volatility / 2, 1), volume: (ind.volume - 5) / 5,
-                stochastic: (ind.stochastic - 50) / 50
+                trend: ind.trend,
+                momentum: ind.momentum * 0.8,
+                rsi: (ind.rsi - 50) / 50,
+                macd: Math.tanh(ind.macd / 100),
+                ema: ((curr - ind.ema) / ind.ema) * 100,
+                volatility: Math.min(ind.volatility / 2, 1),
+                volume: (ind.volume - 5) / 5,
+                stochastic: (ind.stochastic - 50) / 50,
+                bb: (ind.bbPosition - 50) / 50, // NEW
+                adx: (ind.adx - 25) / 25, // NEW
+                atr: Math.min(ind.atr, 1) // NEW
             };
+            
+            // Adaptive multipliers based on regime
             const mult = regime === 'trending' ?
-                {trend:4.5,momentum:3.5,rsi:1.5,macd:2,ema:2,volatility:1,volume:1.2,stochastic:1} :
-                {trend:2,momentum:2,rsi:3,macd:1.5,ema:1.5,volatility:0.8,volume:1,stochastic:2.5};
+                {trend:3.5,momentum:3,rsi:1.2,macd:2,ema:1.8,volatility:0.8,volume:1,stochastic:0.8,bb:2,adx:3,atr:1.5} :
+                {trend:1.5,momentum:1.5,rsi:3.5,macd:1.5,ema:2,volatility:0.5,volume:0.8,stochastic:3,bb:3.5,adx:1,atr:1};
+            
             let wSig = 0, tWeight = 0;
             for (const [k, s] of Object.entries(sig)) {
                 const w = modelWeights[k] * mult[k];
                 wSig += s * w;
                 tWeight += w;
             }
+            
             const norm = wSig / tWeight;
-            const maxChange = regime === 'trending' ? 2.5 : 0.8;
+            
+            // REDUCED max change for more conservative predictions
+            const maxChange = regime === 'trending' ? 1.5 : 0.5;
             let pred = curr * (1 + (norm * maxChange) / 100);
+            
             if (predictions.length > 0) {
                 const last = predictions[predictions.length-1].price;
                 pred = pred * (1 - STABILITY_FACTOR) + last * STABILITY_FACTOR;
             }
+            
             const confidence = calculateConfidence(ind, regime);
+            
             return {
-                price: pred, change: ((pred - curr) / curr) * 100,
+                price: pred,
+                change: ((pred - curr) / curr) * 100,
                 direction: pred > curr ? 'UP ⬆️' : 'DOWN ⬇️',
-                regime, timestamp: Date.now(), targetTime: Date.now() + (PREDICTION_WINDOW * 60 * 1000),
+                regime, timestamp: Date.now(),
+                targetTime: Date.now() + (PREDICTION_WINDOW * 60 * 1000),
                 confidence
             };
         }
         
+        // IMPROVED: More conservative learning
         function evaluatePredictions(curr) {
             const now = Date.now(), windowMs = PREDICTION_WINDOW * 60 * 1000;
             predictions = predictions.filter(pred => {
@@ -941,11 +1035,9 @@
                     const correct = actDir === predDir;
                     
                     if (correct) {
-                        const priceDiff = Math.abs(curr - pred.currentPrice);
-                        simulatedProfit += priceDiff * 0.01;
+                        simulatedProfit += Math.abs(curr - pred.currentPrice) * 0.01;
                     } else {
-                        const priceDiff = Math.abs(curr - pred.currentPrice);
-                        simulatedProfit -= priceDiff * 0.01;
+                        simulatedProfit -= Math.abs(curr - pred.currentPrice) * 0.01;
                     }
                     
                     evaluatedPredictions.push({ correct, regime: pred.regime, timestamp: pred.timestamp });
@@ -954,31 +1046,34 @@
                     updateStreak(correct);
                     if (soundEnabled && correct) playSound();
                     
+                    // IMPROVED: More selective learning
+                    const learningFactor = pred.confidence > 60 ? LEARNING_RATE : LEARNING_RATE * 0.5;
+                    
                     if (correct) {
                         if (pred.regime === 'trending') {
-                            modelWeights.trend *= (1 + LEARNING_RATE * 0.3);
-                            modelWeights.momentum *= (1 + LEARNING_RATE * 0.3);
-                            modelWeights.macd *= (1 + LEARNING_RATE * 0.2);
+                            modelWeights.trend *= (1 + learningFactor * 0.4);
+                            modelWeights.momentum *= (1 + learningFactor * 0.4);
+                            modelWeights.adx *= (1 + learningFactor * 0.3);
                         } else {
-                            modelWeights.rsi *= (1 + LEARNING_RATE * 0.3);
-                            modelWeights.stochastic *= (1 + LEARNING_RATE * 0.3);
-                            modelWeights.ema *= (1 + LEARNING_RATE * 0.2);
+                            modelWeights.rsi *= (1 + learningFactor * 0.4);
+                            modelWeights.bb *= (1 + learningFactor * 0.4);
+                            modelWeights.stochastic *= (1 + learningFactor * 0.3);
                         }
                     } else {
                         if (pred.regime === 'trending') {
-                            modelWeights.trend *= (1 - LEARNING_RATE * 0.2);
-                            modelWeights.momentum *= (1 - LEARNING_RATE * 0.2);
-                            modelWeights.macd *= (1 - LEARNING_RATE * 0.15);
+                            modelWeights.trend *= (1 - learningFactor * 0.3);
+                            modelWeights.momentum *= (1 - learningFactor * 0.3);
                         } else {
-                            modelWeights.rsi *= (1 - LEARNING_RATE * 0.2);
-                            modelWeights.stochastic *= (1 - LEARNING_RATE * 0.2);
-                            modelWeights.ema *= (1 - LEARNING_RATE * 0.15);
+                            modelWeights.rsi *= (1 - learningFactor * 0.3);
+                            modelWeights.bb *= (1 - learningFactor * 0.3);
                         }
                     }
+                    
+                    // Normalize with tighter bounds
                     let total = Object.values(modelWeights).reduce((a,b)=>a+b);
                     for (const k in modelWeights) {
                         modelWeights[k] = (modelWeights[k] / total) * 100;
-                        modelWeights[k] = Math.max(8, Math.min(20, modelWeights[k]));
+                        modelWeights[k] = Math.max(5, Math.min(15, modelWeights[k])); // 5-15% range
                     }
                     return false;
                 }
@@ -1004,7 +1099,12 @@
             const vol = calculateVolatility(history);
             const volPercent = Math.min(100, vol * 10);
             document.getElementById('volatilityFill').style.width = volPercent + '%';
-            document.getElementById('volatilityLabel').textContent = `${vol.toFixed(2)}% (${volPercent > 70 ? 'High' : volPercent > 40 ? 'Medium' : 'Low'})`;
+            document.getElementById('volatilityLabel').textContent = `Volatility: ${vol.toFixed(2)}% (${volPercent > 70 ? 'High' : volPercent > 40 ? 'Medium' : 'Low'})`;
+            
+            const adx = calculateADX(history);
+            const adxPercent = Math.min(100, adx * 2);
+            document.getElementById('adxFill').style.width = adxPercent + '%';
+            document.getElementById('adxValue').textContent = `${adx.toFixed(1)} (${adx > 25 ? 'Strong' : 'Weak'})`;
             
             updateChart(price, prediction ? prediction.price : null);
             
@@ -1022,11 +1122,9 @@
                 regimeEl.textContent = prediction.regime.toUpperCase();
                 regimeEl.style.background = prediction.regime === 'trending' ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)';
                 regimeEl.style.color = prediction.regime === 'trending' ? '#10b981' : '#f59e0b';
-                regimeEl.style.borderColor = prediction.regime === 'trending' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)';
                 
-                document.getElementById('status').textContent = '🚀 v13 PRO Active';
+                document.getElementById('status').textContent = '🚀 v14 Enhanced Active';
             } else {
-                document.getElementById('predictionTime').textContent = 'Collecting...';
                 document.getElementById('status').textContent = `🧠 Collecting... (${history.length}/${MIN_DATA_POINTS})`;
             }
             
@@ -1036,11 +1134,9 @@
                 streakEl.textContent = `${currentStreak.count} ${currentStreak.type === 'win' ? '🔥 Win' : '❄️ Loss'} Streak`;
             }
             
-            const profitPercent = ((simulatedProfit + firstPrice) / firstPrice - 1) * 100;
             const profitEl = document.getElementById('profitValue');
             profitEl.textContent = `$${simulatedProfit.toFixed(2)}`;
             profitEl.className = `profit-value ${simulatedProfit >= 0 ? 'profit-positive' : 'profit-negative'}`;
-            document.getElementById('profitPercent').textContent = `${profitPercent >= 0 ? '+' : ''}${profitPercent.toFixed(2)}%`;
             
             const correct = evaluatedPredictions.filter(p => p.correct).length;
             const total = evaluatedPredictions.length;
@@ -1099,7 +1195,6 @@
         document.getElementById('resetBtn').addEventListener('click', resetAll);
         
         const restored = loadLocal();
-        if (restored) console.log('🔄 Restored');
         
         setTimeout(() => {
             if (document.getElementById('content').style.display !== 'none') initChart();
