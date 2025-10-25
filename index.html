@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BTC Predictor v13 ULTIMATE - Live 24/7</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 50%, #14b8a6 100%);
             min-height: 100vh;
             padding: 20px;
             position: relative;
@@ -23,14 +24,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="rgba(255,255,255,0.03)"/></svg>') repeat;
-            background-size: 50px 50px;
+            background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 20px);
             pointer-events: none;
             z-index: 0;
         }
         
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
@@ -41,9 +41,19 @@
             z-index: 1;
         }
         
-        h1 {
+        .header {
             text-align: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-bottom: 35px;
+        }
+        
+        .logo {
+            font-size: 52px;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 4px 12px rgba(14, 165, 233, 0.3));
+        }
+        
+        h1 {
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
@@ -53,10 +63,8 @@
         }
         
         .version {
-            text-align: center;
-            color: #666;
+            color: #64748b;
             font-size: 13px;
-            margin-bottom: 30px;
             font-weight: 500;
         }
         
@@ -68,12 +76,12 @@
         }
         
         .price-box, .prediction-box-main {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
             color: white;
             padding: 30px;
             border-radius: 20px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);
             position: relative;
             overflow: hidden;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -81,7 +89,7 @@
         
         .price-box:hover, .prediction-box-main:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 15px 40px rgba(14, 165, 233, 0.4);
         }
         
         .price-box::before, .prediction-box-main::before {
@@ -143,11 +151,11 @@
             display: inline-block;
             width: 10px;
             height: 10px;
-            background: #4ade80;
+            background: #10b981;
             border-radius: 50%;
             margin-left: 8px;
             animation: pulse 2s infinite;
-            box-shadow: 0 0 10px #4ade80;
+            box-shadow: 0 0 10px #10b981;
         }
         
         @keyframes pulse {
@@ -177,15 +185,40 @@
         }
         
         .regime-badge.ranging {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            background: linear-gradient(135deg, #f59e0b, #d97706);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
         }
         
         .regime-badge.trending {
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
             box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+        
+        .chart-section {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #e0f2fe;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.1);
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
         }
         
         .stats-grid {
@@ -196,23 +229,23 @@
         }
         
         .stat-card {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
             padding: 20px;
             border-radius: 16px;
             text-align: center;
-            border: 2px solid rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(14, 165, 233, 0.2);
             transition: all 0.3s ease;
         }
         
         .stat-card:hover {
             transform: translateY(-3px);
-            border-color: rgba(102, 126, 234, 0.3);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+            border-color: rgba(14, 165, 233, 0.4);
+            box-shadow: 0 10px 25px rgba(14, 165, 233, 0.15);
         }
         
         .stat-label {
             font-size: 11px;
-            color: #64748b;
+            color: #475569;
             margin-bottom: 8px;
             text-transform: uppercase;
             font-weight: 600;
@@ -222,23 +255,23 @@
         .stat-value {
             font-size: 26px;
             font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         
         .weights-section {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
             padding: 25px;
             border-radius: 20px;
             margin: 25px 0;
-            border: 2px solid rgba(102, 126, 234, 0.1);
+            border: 2px solid rgba(14, 165, 233, 0.2);
         }
         
         .weights-title {
             font-size: 15px;
             font-weight: 700;
-            color: #1e293b;
+            color: #0f172a;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -251,7 +284,7 @@
         
         .weight-label {
             font-size: 11px;
-            color: #64748b;
+            color: #475569;
             margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
@@ -260,7 +293,7 @@
         
         .weight-progress {
             height: 10px;
-            background: #e2e8f0;
+            background: #e0f2fe;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
@@ -268,15 +301,15 @@
         
         .weight-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
             transition: width 0.5s ease;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 10px rgba(14, 165, 233, 0.3);
         }
         
         .predictions-log {
             background: white;
-            border: 2px solid #e2e8f0;
+            border: 2px solid #e0f2fe;
             border-radius: 20px;
             padding: 25px;
             max-height: 280px;
@@ -289,27 +322,27 @@
         }
         
         .predictions-log::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: #f0f9ff;
             border-radius: 10px;
         }
         
         .predictions-log::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: #0ea5e9;
             border-radius: 10px;
         }
         
         .log-title {
             font-size: 15px;
             font-weight: 700;
-            color: #1e293b;
+            color: #0f172a;
             margin-bottom: 18px;
         }
         
         .log-entry {
             font-size: 12px;
             padding: 10px 0;
-            border-bottom: 1px solid #f1f5f9;
-            color: #64748b;
+            border-bottom: 1px solid #f0f9ff;
+            color: #475569;
             font-weight: 500;
         }
         
@@ -333,10 +366,10 @@
             border-radius: 16px;
             text-align: center;
             font-size: 13px;
-            color: #1e40af;
+            color: #0369a1;
             margin-top: 25px;
             font-weight: 600;
-            border: 2px solid rgba(59, 130, 246, 0.2);
+            border: 2px solid rgba(14, 165, 233, 0.2);
         }
         
         .control-buttons {
@@ -365,17 +398,13 @@
             box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         }
         
-        .control-btn:active {
-            transform: translateY(-1px);
-        }
-        
         .btn-export {
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
         }
         
         .btn-import {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #0ea5e9, #06b6d4);
             color: white;
         }
         
@@ -390,8 +419,8 @@
         }
         
         .spinner {
-            border: 5px solid #f3f4f6;
-            border-top: 5px solid #667eea;
+            border: 5px solid #e0f2fe;
+            border-top: 5px solid #0ea5e9;
             border-radius: 50%;
             width: 60px;
             height: 60px;
@@ -425,7 +454,7 @@
         
         .pyth-badge {
             display: inline-block;
-            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
             color: white;
             padding: 6px 12px;
             border-radius: 14px;
@@ -434,7 +463,7 @@
             margin-top: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
         }
         
         .auto-save-indicator {
@@ -473,20 +502,26 @@
             .control-btn {
                 width: 100%;
             }
+            .chart-container {
+                height: 250px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 BTC Predictor v13</h1>
-        <div class="version">
-            ULTIMATE Edition • Fixed Learning Algorithm • Powered by Pyth Network
-            <span id="autoSaveIndicator" class="auto-save-indicator">💾 Auto-saved</span>
+        <div class="header">
+            <div class="logo">₿</div>
+            <h1>BTC Predictor v13</h1>
+            <div class="version">
+                ULTIMATE Edition • Fixed Learning • Pyth Network
+                <span id="autoSaveIndicator" class="auto-save-indicator">💾 Saved</span>
+            </div>
         </div>
         
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p style="color: #64748b; font-weight: 600;">Connecting to Pyth Network...</p>
+            <p style="color: #475569; font-weight: 600;">Connecting to Pyth Network...</p>
         </div>
         
         <div id="error" class="error" style="display: none;">
@@ -503,15 +538,24 @@
                     </div>
                     <div class="box-value" id="currentPrice">$--</div>
                     <div style="font-size: 12px; opacity: 0.85; margin-top: 8px; font-weight: 500;" id="lastUpdate">--</div>
-                    <div class="pyth-badge">⚡ PYTH NETWORK</div>
+                    <div class="pyth-badge">⚡ PYTH</div>
                 </div>
                 <div class="prediction-box-main">
-                    <div class="box-label">5-Minute Prediction</div>
+                    <div class="box-label">5-Min Prediction</div>
                     <div class="box-value" id="predictedPrice">$--</div>
                     <div class="prediction-time" id="predictionTime">Predicting for --</div>
                     <div class="direction" id="direction">--</div>
                     <span id="regime" class="regime-badge ranging">RANGING</span>
                     <div class="countdown" id="countdown">Next: --</div>
+                </div>
+            </div>
+            
+            <div class="chart-section">
+                <div class="chart-title">
+                    📈 Prediction vs Actual Price Chart
+                </div>
+                <div class="chart-container">
+                    <canvas id="predictionChart"></canvas>
                 </div>
             </div>
             
@@ -535,7 +579,7 @@
             </div>
             
             <div class="weights-section">
-                <div class="weights-title">🧠 Model Indicator Weights (Self-Learning)</div>
+                <div class="weights-title">🧠 Model Weights (Self-Learning)</div>
                 <div id="weightsDisplay"></div>
             </div>
             
@@ -549,7 +593,7 @@
             </div>
             
             <div class="status-bar" id="status">
-                🧠 Collecting data for predictions...
+                🧠 Collecting data...
             </div>
             
             <div class="control-buttons">
@@ -567,12 +611,11 @@
         </div>
         
         <div class="footer">
-            v13 ULTIMATE • Fixed Learning Algorithm • Auto-save • Target 50-55% Accuracy
+            v13 ULTIMATE • Fixed Learning • Chart.js Visualization • Target 50-55% Accuracy
         </div>
     </div>
     
     <script>
-        // Configuration
         const PYTH_BTC_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
         const PYTH_API_URL = 'https://hermes.pyth.network/api/latest_price_feeds';
         const UPDATE_INTERVAL = 10000;
@@ -585,6 +628,11 @@
         let history = [];
         let predictions = [];
         let evaluatedPredictions = [];
+        let chartData = {
+            labels: [],
+            actual: [],
+            predicted: []
+        };
         let modelWeights = {
             trend: 12, momentum: 12, rsi: 12, macd: 12,
             ema: 12, volatility: 12, volume: 12, stochastic: 12
@@ -594,8 +642,135 @@
         let lastPrice = 0;
         let nextUpdateTime = Date.now() + UPDATE_INTERVAL;
         const startTime = Date.now();
+        let chart = null;
         
-        // Countdown timer
+        // Initialize Chart
+        function initChart() {
+            const ctx = document.getElementById('predictionChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Actual Price',
+                            data: chartData.actual,
+                            borderColor: '#0ea5e9',
+                            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#0ea5e9'
+                        },
+                        {
+                            label: 'Predicted Price',
+                            data: chartData.predicted,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#f59e0b'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 12,
+                                    weight: 600
+                                },
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 13,
+                                weight: 600
+                            },
+                            bodyFont: {
+                                size: 12
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': $' + context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(14, 165, 233, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10,
+                                    weight: 500
+                                },
+                                color: '#64748b'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(14, 165, 233, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10,
+                                    weight: 500
+                                },
+                                color: '#64748b',
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString('en-US');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateChart(actualPrice, predictedPrice) {
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            chartData.labels.push(time);
+            chartData.actual.push(actualPrice);
+            chartData.predicted.push(predictedPrice || actualPrice);
+            
+            // Keep last 30 data points
+            if (chartData.labels.length > 30) {
+                chartData.labels.shift();
+                chartData.actual.shift();
+                chartData.predicted.shift();
+            }
+            
+            if (chart) {
+                chart.data.labels = chartData.labels;
+                chart.data.datasets[0].data = chartData.actual;
+                chart.data.datasets[1].data = chartData.predicted;
+                chart.update('none'); // No animation for smooth updates
+            }
+        }
+        
         setInterval(() => {
             const remaining = Math.max(0, Math.ceil((nextUpdateTime - Date.now()) / 1000));
             const countdownEl = document.getElementById('countdown');
@@ -610,15 +785,16 @@
             
             const exportData = {
                 metadata: {
-                    version: "13.0 Fixed Learning",
+                    version: "13.0 Fixed",
                     exportDate: new Date().toISOString(),
                     totalRuntime: `${((Date.now() - startTime) / 3600000).toFixed(2)} hours`,
-                    dataSource: "Pyth Network"
+                    dataSource: "Pyth"
                 },
                 history: history,
                 predictions: predictions,
                 evaluatedPredictions: evaluatedPredictions,
                 modelWeights: modelWeights,
+                chartData: chartData,
                 performance: {
                     totalPredictions: total,
                     correctPredictions: correct,
@@ -647,6 +823,14 @@
                     predictions = data.predictions || [];
                     evaluatedPredictions = data.evaluatedPredictions || [];
                     modelWeights = data.modelWeights || modelWeights;
+                    chartData = data.chartData || chartData;
+                    
+                    if (chart) {
+                        chart.data.labels = chartData.labels;
+                        chart.data.datasets[0].data = chartData.actual;
+                        chart.data.datasets[1].data = chartData.predicted;
+                        chart.update();
+                    }
                     
                     saveToLocalStorage();
                     alert(`✅ Imported!\n\n${history.length} data points\n${evaluatedPredictions.length} predictions`);
@@ -660,7 +844,7 @@
                     }
                 }
             } catch (error) {
-                alert('❌ Import failed. Invalid file.');
+                alert('❌ Import failed.');
             }
         }
         
@@ -670,6 +854,7 @@
                     history: history.slice(-100),
                     evaluatedPredictions: evaluatedPredictions,
                     modelWeights: modelWeights,
+                    chartData: chartData,
                     lastSave: Date.now()
                 };
                 localStorage.setItem('btc-predictor-v13-data', JSON.stringify(saveData));
@@ -690,6 +875,7 @@
                     history = data.history || [];
                     evaluatedPredictions = data.evaluatedPredictions || [];
                     modelWeights = data.modelWeights || modelWeights;
+                    chartData = data.chartData || chartData;
                     console.log(`✅ Restored: ${history.length} points`);
                     return true;
                 }
@@ -700,16 +886,17 @@
         }
         
         function resetAll() {
-            if (confirm('⚠️ Delete all data and reset?')) {
+            if (confirm('⚠️ Delete all data?')) {
                 history = [];
                 predictions = [];
                 evaluatedPredictions = [];
+                chartData = { labels: [], actual: [], predicted: [] };
                 modelWeights = {
                     trend: 12, momentum: 12, rsi: 12, macd: 12,
                     ema: 12, volatility: 12, volume: 12, stochastic: 12
                 };
                 localStorage.removeItem('btc-predictor-v13-data');
-                alert('✅ Reset! Reloading...');
+                alert('✅ Reset!');
                 setTimeout(() => location.reload(), 1000);
             }
         }
@@ -910,10 +1097,12 @@
             document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
             document.getElementById('dataPoints').textContent = history.length;
             
+            // Update chart
+            updateChart(currentPrice, prediction ? prediction.price : null);
+            
             if (prediction) {
                 document.getElementById('predictedPrice').textContent = `$${prediction.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 
-                // Show prediction target time
                 const targetTime = new Date(prediction.targetTime);
                 document.getElementById('predictionTime').textContent = `Predicting for ${targetTime.toLocaleTimeString()}`;
                 
@@ -926,7 +1115,7 @@
                 
                 document.getElementById('status').textContent = '🚀 v13 Fixed Learning Active';
             } else {
-                document.getElementById('predictionTime').textContent = 'Collecting data...';
+                document.getElementById('predictionTime').textContent = 'Collecting...';
                 document.getElementById('status').textContent = `🧠 Collecting... (${history.length}/${MIN_DATA_POINTS})`;
             }
             
@@ -994,7 +1183,7 @@
                 console.error('Update error:', error);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
-                document.getElementById('errorMessage').textContent = `Error: ${error.message}. Retry in ${UPDATE_INTERVAL/1000}s...`;
+                document.getElementById('errorMessage').textContent = `Error: ${error.message}`;
             }
         }
         
@@ -1012,10 +1201,25 @@
         });
         document.getElementById('resetBtn').addEventListener('click', resetAll);
         
-        console.log('🚀 BTC Predictor v13 ULTIMATE');
+        console.log('🚀 BTC Predictor v13 ULTIMATE with Chart');
         
         const hasRestoredData = loadFromLocalStorage();
-        if (hasRestoredData) console.log('🔄 Resumed');
+        if (hasRestoredData) {
+            console.log('🔄 Resumed');
+            if (chart && chartData.labels.length > 0) {
+                chart.data.labels = chartData.labels;
+                chart.data.datasets[0].data = chartData.actual;
+                chart.data.datasets[1].data = chartData.predicted;
+                chart.update();
+            }
+        }
+        
+        // Initialize chart after content is shown
+        setTimeout(() => {
+            if (document.getElementById('content').style.display !== 'none') {
+                initChart();
+            }
+        }, 100);
         
         update();
         setInterval(update, UPDATE_INTERVAL);
