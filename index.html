@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC Predictor v12 ULTIMATE - Live 24/7</title>
+    <title>BTC Predictor v13 ULTIMATE - Live 24/7</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -343,9 +343,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>🚀 BTC Predictor ULTIMATE</h1>
+        <h1>🚀 BTC Predictor v13 ULTIMATE</h1>
         <div class="version">
-            v12.0 with Advanced AI • Powered by Pyth Network
+            v13.0 Fixed Learning Algorithm • Powered by Pyth Network
             <span id="autoSaveIndicator" class="auto-save-indicator">💾 Auto-saved</span>
         </div>
         
@@ -398,7 +398,7 @@
             </div>
             
             <div class="weights-section">
-                <div class="weights-title">🧠 Model Indicator Weights (Self-Learning)</div>
+                <div class="weights-title">🧠 Model Indicator Weights (Fixed Learning)</div>
                 <div id="weightsDisplay"></div>
             </div>
             
@@ -430,42 +430,42 @@
         </div>
         
         <div class="footer">
-            Real-time data from Pyth Network • Auto-saves every 5 minutes • Advanced AI with 8 Indicators
+            v13 with Fixed Learning Algorithm • Auto-saves every 5 min • Target 50-55% Accuracy
         </div>
     </div>
     
     <script>
-        // Configuration
+        // Configuration - FIXED VALUES
         const PYTH_BTC_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
         const PYTH_API_URL = 'https://hermes.pyth.network/api/latest_price_feeds';
-        const UPDATE_INTERVAL = 10000; // 10 seconds
+        const UPDATE_INTERVAL = 10000;
         const PREDICTION_WINDOW = 5;
         const MIN_DATA_POINTS = 25;
-        const STABILITY_FACTOR = 0.25;
-        const LEARNING_RATE = 0.15;
-        const AUTO_SAVE_INTERVAL = 300000; // 5 minutes
+        const STABILITY_FACTOR = 0.35; // INCREASED from 0.25
+        const LEARNING_RATE = 0.05; // REDUCED from 0.15
+        const AUTO_SAVE_INTERVAL = 300000;
         
-        // Data structures
+        // Data structures - FIXED INITIAL WEIGHTS
         let history = [];
         let predictions = [];
         let evaluatedPredictions = [];
         let modelWeights = {
-            trend: 16, momentum: 16, rsi: 14, macd: 14,
-            ema: 13, volatility: 10, volume: 10, stochastic: 7
-        };
+            trend: 12, momentum: 12, rsi: 12, macd: 12,
+            ema: 12, volatility: 12, volume: 12, stochastic: 12
+        }; // Equal distribution to prevent bias
         
         let updateCount = 0;
         let lastPrice = 0;
         const startTime = Date.now();
         
-        // Export/Import and LocalStorage functions
+        // Export/Import functions
         function exportData() {
             const correct = evaluatedPredictions.filter(p => p.correct).length;
             const total = evaluatedPredictions.length;
             
             const exportData = {
                 metadata: {
-                    version: "12.0 Pyth Ultimate",
+                    version: "13.0 Fixed Learning",
                     exportDate: new Date().toISOString(),
                     totalRuntime: `${((Date.now() - startTime) / 3600000).toFixed(2)} hours`,
                     dataSource: "Pyth Network"
@@ -486,31 +486,27 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `btc-predictor-v12-${Date.now()}.json`;
+            a.download = `btc-predictor-v13-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
             
-            console.log('✅ Data exported successfully');
-            alert(`Data exported successfully!\n\nStats:\n- ${history.length} data points\n- ${total} predictions\n- ${(correct / total * 100).toFixed(1)}% accuracy`);
+            console.log('✅ Data exported');
+            alert(`Exported!\n\n${history.length} data points\n${total} predictions\n${(correct / total * 100).toFixed(1)}% accuracy`);
         }
         
         function importData(fileContent) {
             try {
                 const data = JSON.parse(fileContent);
                 
-                if (data.metadata && data.metadata.version && data.metadata.version.includes('12.0')) {
+                if (data.metadata && data.metadata.version) {
                     history = data.history || [];
                     predictions = data.predictions || [];
                     evaluatedPredictions = data.evaluatedPredictions || [];
                     modelWeights = data.modelWeights || modelWeights;
                     
-                    console.log('✅ Data imported successfully');
-                    console.log(`📊 Loaded: ${history.length} data points, ${evaluatedPredictions.length} evaluated predictions`);
-                    
                     saveToLocalStorage();
-                    alert(`Data imported successfully!\n\nLoaded:\n- ${history.length} data points\n- ${evaluatedPredictions.length} predictions\n- Model weights restored`);
+                    alert(`Imported!\n\n${history.length} data points\n${evaluatedPredictions.length} predictions`);
                     
-                    // Force UI update
                     if (history.length > 0) {
                         const priceData = { price: history[history.length - 1], timestamp: Date.now() };
                         const regime = detectRegime(history);
@@ -519,71 +515,67 @@
                         updateUI(priceData, prediction);
                     }
                 } else {
-                    alert('⚠️ Invalid file version. Please export from v12.0 or later.');
+                    alert('⚠️ Invalid file version.');
                 }
             } catch (error) {
-                console.error('Import error:', error);
-                alert('❌ Failed to import data. Invalid file format.');
+                alert('❌ Failed to import. Invalid file.');
             }
         }
         
         function saveToLocalStorage() {
             try {
                 const saveData = {
-                    history: history.slice(-100), // Keep last 100 points
+                    history: history.slice(-100),
                     evaluatedPredictions: evaluatedPredictions,
                     modelWeights: modelWeights,
                     lastSave: Date.now()
                 };
-                localStorage.setItem('btc-predictor-v12-data', JSON.stringify(saveData));
+                localStorage.setItem('btc-predictor-v13-data', JSON.stringify(saveData));
                 
-                // Show auto-save indicator
                 const indicator = document.getElementById('autoSaveIndicator');
                 indicator.classList.add('visible');
                 setTimeout(() => indicator.classList.remove('visible'), 2000);
                 
-                console.log('💾 Auto-saved to localStorage');
+                console.log('💾 Auto-saved');
             } catch (error) {
-                console.error('LocalStorage save error:', error);
+                console.error('Save error:', error);
             }
         }
         
         function loadFromLocalStorage() {
             try {
-                const saved = localStorage.getItem('btc-predictor-v12-data');
+                const saved = localStorage.getItem('btc-predictor-v13-data');
                 if (saved) {
                     const data = JSON.parse(saved);
                     history = data.history || [];
                     evaluatedPredictions = data.evaluatedPredictions || [];
                     modelWeights = data.modelWeights || modelWeights;
                     
-                    console.log(`✅ Restored from localStorage: ${history.length} data points`);
-                    console.log(`📊 Last save: ${new Date(data.lastSave).toLocaleString()}`);
-                    
+                    console.log(`✅ Restored: ${history.length} data points`);
                     return true;
                 }
             } catch (error) {
-                console.error('LocalStorage load error:', error);
+                console.error('Load error:', error);
             }
             return false;
         }
         
         function resetAll() {
-            if (confirm('⚠️ This will delete all learned data and reset the model. Are you sure?')) {
+            if (confirm('⚠️ Delete all data and reset model?')) {
                 history = [];
                 predictions = [];
                 evaluatedPredictions = [];
                 modelWeights = {
-                    trend: 16, momentum: 16, rsi: 14, macd: 14,
-                    ema: 13, volatility: 10, volume: 10, stochastic: 7
+                    trend: 12, momentum: 12, rsi: 12, macd: 12,
+                    ema: 12, volatility: 12, volume: 12, stochastic: 12
                 };
-                localStorage.removeItem('btc-predictor-v12-data');
-                alert('✅ All data reset! Page will reload...');
+                localStorage.removeItem('btc-predictor-v13-data');
+                alert('✅ Reset! Reloading...');
                 setTimeout(() => location.reload(), 1000);
             }
         }
         
-        // Fetch price from Pyth Network
+        // Fetch price
         async function fetchBTCPrice() {
             try {
                 const response = await fetch(`${PYTH_API_URL}?ids[]=${PYTH_BTC_ID}`, {
@@ -591,25 +583,19 @@
                     headers: { 'Accept': 'application/json' }
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`Pyth API returned ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`API error ${response.status}`);
                 
                 const data = await response.json();
-                
                 if (data && data[0] && data[0].price) {
                     const priceData = data[0].price;
-                    const price = parseFloat(priceData.price) * Math.pow(10, priceData.expo);
-                    
                     return {
-                        price: price,
+                        price: parseFloat(priceData.price) * Math.pow(10, priceData.expo),
                         timestamp: Date.now()
                     };
                 }
-                
-                throw new Error('Invalid Pyth response format');
+                throw new Error('Invalid response');
             } catch (error) {
-                console.error('❌ Pyth Network error:', error);
+                console.error('❌ Fetch error:', error);
                 throw error;
             }
         }
@@ -660,18 +646,23 @@
             return Math.sqrt(variance) / avg * 100;
         }
         
+        // IMPROVED REGIME DETECTION
         function detectRegime(prices) {
             if (prices.length < 15) return 'ranging';
             const recent = prices.slice(-15);
+            
             let upMoves = 0, downMoves = 0;
             for (let i = 1; i < recent.length; i++) {
                 const change = ((recent[i] - recent[i-1]) / recent[i-1]) * 100;
-                if (change > 0.2) upMoves++;
-                else if (change < -0.2) downMoves++;
+                if (change > 0.15) upMoves++;  // Lower threshold
+                else if (change < -0.15) downMoves++;
             }
+            
             const volatility = calculateVolatility(prices);
             const consistency = Math.max(upMoves, downMoves) / 14;
-            return (consistency > 0.65 && volatility > 0.5) ? 'trending' : 'ranging';
+            const trendStrength = Math.abs(upMoves - downMoves) / 14;
+            
+            return (consistency > 0.5 && volatility > 0.4 && trendStrength > 0.3) ? 'trending' : 'ranging';
         }
         
         function calculateIndicators(prices) {
@@ -733,6 +724,7 @@
             };
         }
         
+        // FIXED LEARNING ALGORITHM
         function evaluatePredictions(currentPrice) {
             const now = Date.now();
             const windowMs = PREDICTION_WINDOW * 60 * 1000;
@@ -746,23 +738,36 @@
                     evaluatedPredictions.push({ correct, regime: pred.regime, timestamp: pred.timestamp });
                     if (evaluatedPredictions.length > 50) evaluatedPredictions.shift();
                     
-                    // Learning
+                    // FIXED LEARNING LOGIC
                     if (correct) {
-                        for (const key in modelWeights) modelWeights[key] *= (1 + LEARNING_RATE * 0.1);
+                        // Boost indicators that worked for this regime
+                        if (pred.regime === 'trending') {
+                            modelWeights.trend *= (1 + LEARNING_RATE * 0.3);
+                            modelWeights.momentum *= (1 + LEARNING_RATE * 0.3);
+                            modelWeights.macd *= (1 + LEARNING_RATE * 0.2);
+                        } else {
+                            modelWeights.rsi *= (1 + LEARNING_RATE * 0.3);
+                            modelWeights.stochastic *= (1 + LEARNING_RATE * 0.3);
+                            modelWeights.ema *= (1 + LEARNING_RATE * 0.2);
+                        }
                     } else {
+                        // Reduce indicators that failed for this regime
                         if (pred.regime === 'trending') {
                             modelWeights.trend *= (1 - LEARNING_RATE * 0.2);
                             modelWeights.momentum *= (1 - LEARNING_RATE * 0.2);
+                            modelWeights.macd *= (1 - LEARNING_RATE * 0.15);
                         } else {
                             modelWeights.rsi *= (1 - LEARNING_RATE * 0.2);
                             modelWeights.stochastic *= (1 - LEARNING_RATE * 0.2);
+                            modelWeights.ema *= (1 - LEARNING_RATE * 0.15);
                         }
                     }
                     
+                    // Normalize with FIXED BOUNDS
                     let total = Object.values(modelWeights).reduce((a, b) => a + b);
                     for (const key in modelWeights) {
                         modelWeights[key] = (modelWeights[key] / total) * 100;
-                        modelWeights[key] = Math.max(3, Math.min(25, modelWeights[key]));
+                        modelWeights[key] = Math.max(8, Math.min(20, modelWeights[key])); // 8-20% range
                     }
                     return false;
                 }
@@ -773,7 +778,6 @@
         function updateUI(priceData, prediction) {
             const currentPrice = priceData.price;
             
-            // Animate price change
             const priceEl = document.getElementById('currentPrice');
             if (lastPrice && currentPrice !== lastPrice) {
                 priceEl.style.color = currentPrice > lastPrice ? '#28a745' : '#dc3545';
@@ -784,7 +788,6 @@
             priceEl.textContent = `$${currentPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
             document.getElementById('dataPoints').textContent = history.length;
-            document.getElementById('updateRate').textContent = '6';
             
             if (prediction) {
                 document.getElementById('predictedPrice').textContent = `$${prediction.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
@@ -795,9 +798,9 @@
                 regimeEl.textContent = prediction.regime.toUpperCase();
                 regimeEl.className = `regime-badge ${prediction.regime}`;
                 
-                document.getElementById('status').textContent = '🚀 Active predictions with self-learning AI';
+                document.getElementById('status').textContent = '🚀 v13 Fixed Learning Active';
             } else {
-                document.getElementById('status').textContent = `🧠 Collecting data... (${history.length}/${MIN_DATA_POINTS})`;
+                document.getElementById('status').textContent = `🧠 Collecting... (${history.length}/${MIN_DATA_POINTS})`;
             }
             
             const correct = evaluatedPredictions.filter(p => p.correct).length;
@@ -859,13 +862,13 @@
                     document.getElementById('error').style.display = 'none';
                     document.getElementById('content').style.display = 'block';
                 } else {
-                    throw new Error('Invalid price data from Pyth');
+                    throw new Error('Invalid price data');
                 }
             } catch (error) {
                 console.error('Update error:', error);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
-                document.getElementById('errorMessage').textContent = `Unable to fetch from Pyth Network: ${error.message}. Retrying in ${UPDATE_INTERVAL/1000}s...`;
+                document.getElementById('errorMessage').textContent = `Pyth error: ${error.message}. Retry in ${UPDATE_INTERVAL/1000}s...`;
             }
         }
         
@@ -885,20 +888,15 @@
         document.getElementById('resetBtn').addEventListener('click', resetAll);
         
         // Initialize
-        console.log('🚀 Starting BTC Predictor v12 ULTIMATE with Pyth Network...');
-        console.log(`📡 Update interval: ${UPDATE_INTERVAL/1000} seconds`);
+        console.log('🚀 BTC Predictor v13 ULTIMATE - Fixed Learning Algorithm');
         
-        // Load saved data on startup
         const hasRestoredData = loadFromLocalStorage();
         if (hasRestoredData) {
             console.log('🔄 Resumed from previous session');
         }
         
-        // Start updates
         update();
         setInterval(update, UPDATE_INTERVAL);
-        
-        // Auto-save every 5 minutes
         setInterval(saveToLocalStorage, AUTO_SAVE_INTERVAL);
     </script>
 </body>
