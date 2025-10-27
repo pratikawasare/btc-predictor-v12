@@ -168,12 +168,12 @@
         // Constants - IMPROVED VALUES
         const PYTH_BTC_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
         const PYTH_API_URL = 'https://hermes.pyth.network/api/latest_price_feeds';
-        const UPDATE_INTERVAL = 10000; // 10 seconds
-        const PREDICTION_WINDOW = 15; // Changed from 5 to 15 minutes
-        const MIN_DATA_FOR_TRAINING = 200; // Increased from 100
-        const MIN_CONFIDENCE_TO_TRADE = 60; // Increased from 55
-        const RETRAIN_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours (instead of 20 minutes)
-        const MIN_PREDICTIONS_FOR_RETRAIN = 20; // Increased from 5
+        const UPDATE_INTERVAL = 10000;
+        const PREDICTION_WINDOW = 15;
+        const MIN_DATA_FOR_TRAINING = 200;
+        const MIN_CONFIDENCE_TO_TRADE = 60;
+        const RETRAIN_INTERVAL = 4 * 60 * 60 * 1000;
+        const MIN_PREDICTIONS_FOR_RETRAIN = 20;
         
         // State Variables
         let history = [];
@@ -184,7 +184,7 @@
         let isTrading = false;
         let startingBalance = 1000;
         let currentBalance = 1000;
-        let leverage = 5; // Default to safer 5x
+        let leverage = 5;
         let stopLossPercent = 2;
         let trailingStopPercent = 1.5;
         let position = null;
@@ -390,20 +390,33 @@
             const html = trades.map(t => {
                 const pnlClass = t.pnl > 0 ? 'profit' : 'loss';
                 const emoji = t.pnl > 0 ? '✅' : '❌';
+                
+                let closeTimeStr;
+                try {
+                    if (t.closeTime instanceof Date) {
+                        closeTimeStr = t.closeTime.toLocaleTimeString();
+                    } else if (typeof t.closeTime === 'string') {
+                        closeTimeStr = new Date(t.closeTime).toLocaleTimeString();
+                    } else {
+                        closeTimeStr = new Date().toLocaleTimeString();
+                    }
+                } catch (e) {
+                    closeTimeStr = 'Unknown time';
+                }
+                
                 return `<div class="trade-entry ${pnlClass}">
                     <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                         <span style="font-weight:700;">${emoji} ${t.type.toUpperCase()} ${t.leverage}x</span>
                         <span style="font-weight:700;color:${t.pnl>=0?'#10b981':'#ef4444'};">${t.pnl>=0?'+':''}$${t.pnl.toFixed(2)}</span>
                     </div>
                     <div style="font-size:11px;color:#64748b;">Entry: $${t.entry.toFixed(2)} → Exit: $${t.exit.toFixed(2)} (${t.pnlPercent>=0?'+':''}${t.pnlPercent.toFixed(2)}%)</div>
-                    <div style="font-size:10px;color:#475569;margin-top:3px;">${t.reason} • ${t.closeTime.toLocaleTimeString()}</div>
+                    <div style="font-size:10px;color:#475569;margin-top:3px;">${t.reason} • ${closeTimeStr}</div>
                 </div>`;
             }).join('');
             
             document.getElementById('tradeLog').innerHTML = html;
         }
         
-        // AI Model Training - IMPROVED
         async function trainAIModel(isInitial = false) {
             if (isTraining || history.length < MIN_DATA_FOR_TRAINING) {
                 if (!isInitial) {
@@ -422,11 +435,10 @@
             console.log('🧠 ' + (isInitial ? 'Initial Training' : `Retrain #${retrainCount + 1}`));
             
             try {
-                // Use more data for better training
                 const trainingData = isInitial ? history : history.slice(-500);
                 const data = normalizeData(trainingData);
                 
-                const seqLength = 20; // Increased from 15
+                const seqLength = 20;
                 const X = [];
                 const y = [];
                 
@@ -442,14 +454,13 @@
                 const xTensor = tf.tensor3d(X);
                 const yTensor = tf.tensor2d(y);
                 
-                // Build improved model
                 if (!aiModel || isInitial) {
                     aiModel = tf.sequential();
                     aiModel.add(tf.layers.lstm({
                         units: 128,
                         returnSequences: true,
                         inputShape: [seqLength, 1],
-                        kernelRegularizer: tf.regularizers.l2({ l2: 0.001 }) // Add regularization
+                        kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
                     }));
                     aiModel.add(tf.layers.dropout({ rate: 0.3 }));
                     aiModel.add(tf.layers.lstm({
@@ -462,18 +473,18 @@
                     aiModel.add(tf.layers.dense({ units: 1 }));
                     
                     aiModel.compile({
-                        optimizer: tf.train.adam(0.001), // Reduced learning rate
+                        optimizer: tf.train.adam(0.001),
                         loss: 'meanSquaredError',
                         metrics: ['mae']
                     });
                 }
                 
-                const epochs = isInitial ? 80 : 40; // Increased epochs
+                const epochs = isInitial ? 80 : 40;
                 
                 await aiModel.fit(xTensor, yTensor, {
                     epochs: epochs,
                     batchSize: 32,
-                    validationSplit: 0.2, // Increased validation split
+                    validationSplit: 0.2,
                     shuffle: true,
                     callbacks: {
                         onEpochEnd: (epoch, logs) => {
@@ -518,7 +529,6 @@
         function shouldRetrain() {
             if (!modelTrained) return false;
             
-            // Retrain every 4 hours OR after 20 predictions
             if (lastRetrainTime && (Date.now() - lastRetrainTime >= RETRAIN_INTERVAL)) {
                 console.log('🔄 Scheduled retrain (4 hours passed)');
                 return true;
@@ -546,7 +556,6 @@
             return (normalizedVal * std) + mean;
         }
         
-        // Improved Prediction Function
         async function predictWithAI(currentPrice) {
             if (!aiModel || !modelTrained || history.length < 20) return null;
             
@@ -572,7 +581,6 @@
                 
                 predictionsSinceRetrain++;
                 
-                // Check if retrain needed
                 if (shouldRetrain()) {
                     setTimeout(() => trainAIModel(false), 2000);
                 }
@@ -591,11 +599,9 @@
             }
         }
         
-        // Improved Confidence Calculation
         function calculateConfidence(predicted, current, recentData) {
             const percentDiff = Math.abs((predicted - current) / current) * 100;
             
-            // Calculate volatility
             const prices = recentData.slice(-30);
             const changes = [];
             for (let i = 1; i < prices.length; i++) {
@@ -605,7 +611,6 @@
             
             let confidence = 50;
             
-            // Better confidence based on volatility alignment
             if (percentDiff > avgVolatility * 0.5 && percentDiff < avgVolatility * 2.5) {
                 confidence = 75;
             } else if (percentDiff > avgVolatility * 0.3 && percentDiff < avgVolatility * 3) {
@@ -614,14 +619,12 @@
                 confidence = 60;
             }
             
-            // Bonus for significant moves
             if (percentDiff > 0.3) confidence += 5;
             if (percentDiff > 0.6) confidence += 5;
             
             return Math.min(Math.max(confidence, 45), 85);
         }
         
-        // Chart Initialization
         function initChart() {
             const ctx = document.getElementById('predictionChart').getContext('2d');
             chart = new Chart(ctx, {
@@ -696,7 +699,6 @@
             }
         }
         
-        // Evaluate Predictions
         function evaluatePredictions(currentPrice) {
             const now = Date.now();
             const windowMs = PREDICTION_WINDOW * 60 * 1000;
@@ -720,7 +722,6 @@
             });
         }
         
-        // Fetch BTC Price
         async function fetchBTCPrice() {
             const response = await fetch(`${PYTH_API_URL}?ids[]=${PYTH_BTC_ID}`);
             const data = await response.json();
@@ -734,7 +735,6 @@
             throw new Error('Invalid response');
         }
         
-        // Main Update Function
         async function update() {
             try {
                 const priceData = await fetchBTCPrice();
@@ -755,14 +755,12 @@
                     
                     updateUI(priceData, prediction);
                     
-                    // Trading Logic
                     if (isTrading && currentBalance > 0) {
                         if (position) {
                             updateTrailingStop(price);
                             checkStopLoss(price);
                             updateLivePosition();
                             
-                            // Check if signal changed significantly
                             if (prediction && prediction.confidence >= MIN_CONFIDENCE_TO_TRADE) {
                                 const shouldClose = 
                                     (position.type === 'long' && prediction.direction.includes('DOWN')) ||
@@ -775,7 +773,6 @@
                                 }
                             }
                         } else {
-                            // Open new position
                             if (prediction && prediction.confidence >= MIN_CONFIDENCE_TO_TRADE) {
                                 const type = prediction.direction.includes('UP') ? 'long' : 'short';
                                 openPosition(type, price);
@@ -786,7 +783,6 @@
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('content').style.display = 'block';
                     
-                    // Auto-train when ready
                     if (history.length >= MIN_DATA_FOR_TRAINING && !modelTrained && !isTraining) {
                         const shouldAsk = localStorage.getItem('btc-v18-train-asked');
                         if (!shouldAsk) {
@@ -829,7 +825,6 @@
             document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
             document.getElementById('totalPredictions').textContent = total;
             
-            // Update AI Status
             const dataProgress = (history.length / MIN_DATA_FOR_TRAINING) * 100;
             document.getElementById('trainingProgress').style.width = Math.min(dataProgress, 100) + '%';
             
@@ -848,7 +843,6 @@
             }
         }
         
-        // Import Data Function
         async function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -857,35 +851,53 @@
                 const text = await file.text();
                 const data = JSON.parse(text);
                 
-                // Import history
                 if (data.history && Array.isArray(data.history)) {
                     history = data.history;
                     console.log('✅ Imported', history.length, 'price history points');
                 }
                 
-                // Import trades if available
                 if (data.trades && Array.isArray(data.trades)) {
-                    trades = data.trades.slice(0, 50);
+                    trades = data.trades.slice(0, 50).map(trade => {
+                        if (trade.time && typeof trade.time === 'string') {
+                            trade.time = new Date(trade.time);
+                        }
+                        if (trade.closeTime && typeof trade.closeTime === 'string') {
+                            trade.closeTime = new Date(trade.closeTime);
+                        }
+                        return trade;
+                    });
                     updateTradeLog();
                     console.log('✅ Imported', trades.length, 'trades');
                 }
                 
-                // Import trading stats if available
                 if (data.trading) {
-                    if (data.trading.winCount) winCount = data.trading.winCount;
-                    if (data.trading.liqCount) lossCount = data.trading.liqCount;
+                    if (data.trading.winCount !== undefined) winCount = data.trading.winCount;
+                    if (data.trading.liqCount !== undefined) lossCount = data.trading.liqCount;
+                    if (data.trading.lossCount !== undefined) lossCount = data.trading.lossCount;
                 }
                 
-                // Import evaluated predictions
                 if (data.evaluatedPredictions && Array.isArray(data.evaluatedPredictions)) {
                     evaluatedPredictions = data.evaluatedPredictions.slice(-100);
                     console.log('✅ Imported', evaluatedPredictions.length, 'evaluated predictions');
                 }
                 
-                alert(`✅ Data imported successfully!\n\n• ${history.length} price points\n• ${trades.length} trades\n• ${evaluatedPredictions.length} predictions`);
+                if (data.aiStatus) {
+                    if (data.aiStatus.retrainCount !== undefined) {
+                        retrainCount = data.aiStatus.retrainCount;
+                        document.getElementById('retrainCount').textContent = retrainCount;
+                    }
+                }
                 
-                // Update UI
+                alert(`✅ Data imported successfully!\n\n• ${history.length} price points\n• ${trades.length} trades\n• ${evaluatedPredictions.length} predictions\n• ${retrainCount} retrain cycles`);
+                
                 updateTradingUI();
+                
+                const correct = evaluatedPredictions.filter(p => p.correct).length;
+                const total = evaluatedPredictions.length;
+                const accuracy = total > 0 ? (correct / total * 100) : 0;
+                document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
+                document.getElementById('totalPredictions').textContent = total;
+                
                 document.getElementById('importFile').value = '';
                 
             } catch (error) {
@@ -894,7 +906,6 @@
             }
         }
         
-        // Export Data
         function exportData() {
             const correct = evaluatedPredictions.filter(p => p.correct).length;
             const total = evaluatedPredictions.length;
@@ -937,7 +948,6 @@
             URL.revokeObjectURL(url);
         }
         
-        // Reset All
         function resetAll() {
             if (confirm('⚠️ Reset everything?\n\nThis will delete:\n• All data\n• AI model\n• Trading history\n• Predictions\n\nContinue?')) {
                 history = [];
@@ -968,7 +978,6 @@
         document.getElementById('exportBtn').addEventListener('click', exportData);
         document.getElementById('resetBtn').addEventListener('click', resetAll);
         
-        // Initialize
         setTimeout(() => {
             if (document.getElementById('content').style.display !== 'none') {
                 try {
@@ -980,7 +989,6 @@
             }
         }, 500);
         
-        // Start updates
         update();
         setInterval(update, UPDATE_INTERVAL);
     </script>
