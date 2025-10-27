@@ -38,6 +38,7 @@
         .leverage-btn.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981; color: white; }
         .trade-btn { padding: 16px; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px; width: 100%; margin-top: 15px; }
         .trade-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+        .trade-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         .trade-btn.start { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
         .trade-btn.stop { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
         .trade-btn.train { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; }
@@ -81,6 +82,7 @@
         .spinner { border: 4px solid rgba(245, 158, 11, 0.1); border-top: 4px solid #f59e0b; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .file-input { display: none; }
+        .error-banner { background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; color: #fca5a5; display: none; }
         @media (max-width: 1400px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -91,6 +93,7 @@
             <h1>BTC Predictor v18<span class="ai-badge">🧠 IMPROVED</span><span class="fixed-badge">✅ FIXED</span></h1>
             <div class="version">Enhanced LSTM • Smart Trading • Trailing Stops • Import Data</div>
         </div>
+        <div id="errorBanner" class="error-banner"></div>
         <div id="loading" class="loading"><div class="spinner"></div><p style="color: #64748b;">Initializing Enhanced System...</p></div>
         <div id="content" style="display: none;">
             <div class="main-grid">
@@ -165,7 +168,25 @@
         </div>
     </div>
     <script>
-        // Constants - IMPROVED VALUES
+        console.log('🚀 BTC Predictor v18 Starting...');
+        
+        // Error Handler
+        function showError(message) {
+            console.error('❌', message);
+            const banner = document.getElementById('errorBanner');
+            banner.textContent = '❌ Error: ' + message;
+            banner.style.display = 'block';
+            setTimeout(() => { banner.style.display = 'none'; }, 5000);
+        }
+        
+        // Check if libraries loaded
+        if (typeof tf === 'undefined') {
+            showError('TensorFlow.js failed to load. Check your internet connection.');
+        }
+        if (typeof Chart === 'undefined') {
+            showError('Chart.js failed to load. Check your internet connection.');
+        }
+        
         const PYTH_BTC_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
         const PYTH_API_URL = 'https://hermes.pyth.network/api/latest_price_feeds';
         const UPDATE_INTERVAL = 10000;
@@ -175,7 +196,6 @@
         const RETRAIN_INTERVAL = 4 * 60 * 60 * 1000;
         const MIN_PREDICTIONS_FOR_RETRAIN = 20;
         
-        // State Variables
         let history = [];
         let predictions = [];
         let evaluatedPredictions = [];
@@ -197,8 +217,8 @@
         let retrainCount = 0;
         let lastRetrainTime = null;
         let predictionsSinceRetrain = 0;
+        let updateInProgress = false;
         
-        // Leverage Selector
         document.querySelectorAll('.leverage-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.leverage-btn').forEach(b => b.classList.remove('active'));
@@ -207,7 +227,6 @@
             });
         });
         
-        // Trading Controls
         document.getElementById('startTrading').addEventListener('click', startTrading);
         document.getElementById('stopTrading').addEventListener('click', stopTrading);
         document.getElementById('trainBtn').addEventListener('click', () => trainAIModel(true));
@@ -233,6 +252,7 @@
             document.getElementById('stopLoss').disabled = true;
             document.getElementById('trailingStop').disabled = true;
             updateTradingUI();
+            console.log('✅ Trading started');
         }
         
         function stopTrading() {
@@ -244,6 +264,7 @@
             document.getElementById('stopLoss').disabled = false;
             document.getElementById('trailingStop').disabled = false;
             document.getElementById('livePositionCard').style.display = 'none';
+            console.log('⏹️ Trading stopped');
         }
         
         function openPosition(type, entry) {
@@ -264,6 +285,7 @@
                 highestPrice: entry,
                 lowestPrice: entry
             };
+            console.log('📈 Opened', type.toUpperCase(), 'position at $' + entry.toFixed(2));
             updateLivePosition();
         }
         
@@ -299,6 +321,7 @@
             trades.unshift(trade);
             if (trades.length > 50) trades.pop();
             
+            console.log('🔚 Closed', position.type.toUpperCase(), 'P&L:', pnl.toFixed(2), 'Reason:', reason);
             position = null;
             document.getElementById('livePositionCard').style.display = 'none';
             updateTradingUI();
@@ -340,7 +363,7 @@
         }
         
         function updateLivePosition() {
-            if (!position || !isTrading) {
+            if (!position || !isTrading || history.length === 0) {
                 document.getElementById('livePositionCard').style.display = 'none';
                 return;
             }
@@ -363,7 +386,6 @@
             document.getElementById('posLivePnLPercent').textContent = (pnlPercent * 100 >= 0 ? '+' : '') + (pnlPercent * 100).toFixed(2) + '%';
             document.getElementById('posLivePnLPercent').style.color = pnlPercent >= 0 ? '#10b981' : '#ef4444';
             
-            const activeStop = position.trailingStop || position.stopLoss;
             document.getElementById('posStopLoss').textContent = '$' + position.stopLoss.toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('posTrailStop').textContent = position.trailingStop 
                 ? '$' + position.trailingStop.toLocaleString('en-US', {minimumFractionDigits: 2})
@@ -420,7 +442,7 @@
         async function trainAIModel(isInitial = false) {
             if (isTraining || history.length < MIN_DATA_FOR_TRAINING) {
                 if (!isInitial) {
-                    console.log('⏭️ Skipping retrain - insufficient data or already training');
+                    console.log('⏭️ Skipping retrain');
                     return;
                 }
                 alert(`Need ${MIN_DATA_FOR_TRAINING} data points. Currently have: ${history.length}`);
@@ -428,7 +450,8 @@
             }
             
             isTraining = true;
-            document.getElementById('trainBtn').disabled = true;
+            const trainBtn = document.getElementById('trainBtn');
+            trainBtn.disabled = true;
             const statusPrefix = isInitial ? 'Initial training' : `Retraining (${retrainCount + 1})`;
             document.getElementById('modelStatus').textContent = statusPrefix + '...';
             
@@ -517,12 +540,13 @@
                 
             } catch (error) {
                 console.error('❌ Training error:', error);
+                showError('Training failed: ' + error.message);
                 document.getElementById('modelStatus').textContent = '❌ Training Failed';
                 document.getElementById('trainingInfo').textContent = 'Error: ' + error.message;
                 if (isInitial) alert('Training failed: ' + error.message);
             } finally {
                 isTraining = false;
-                document.getElementById('trainBtn').disabled = false;
+                trainBtn.disabled = false;
             }
         }
         
@@ -626,76 +650,82 @@
         }
         
         function initChart() {
-            const ctx = document.getElementById('predictionChart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: chartData.labels,
-                    datasets: [{
-                        label: 'Actual Price',
-                        data: chartData.actual,
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245,158,11,0.05)',
-                        borderWidth: 3,
-                        tension: 0.4,
-                        pointRadius: 3,
-                        pointHoverRadius: 6
-                    }, {
-                        label: '15min Prediction',
-                        data: chartData.predicted,
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'rgba(139,92,246,0.05)',
-                        borderWidth: 3,
-                        borderDash: [8, 4],
-                        tension: 0.4,
-                        pointRadius: 3,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: {
-                            labels: { color: '#94a3b8', font: { size: 12, weight: 700 }, padding: 15 },
-                            position: 'top'
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15,23,42,0.95)',
-                            titleColor: '#f59e0b',
-                            bodyColor: '#e2e8f0',
-                            borderColor: 'rgba(245,158,11,0.3)',
-                            borderWidth: 1,
-                            padding: 12
-                        }
+            try {
+                const ctx = document.getElementById('predictionChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            label: 'Actual Price',
+                            data: chartData.actual,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245,158,11,0.05)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }, {
+                            label: '15min Prediction',
+                            data: chartData.predicted,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139,92,246,0.05)',
+                            borderWidth: 3,
+                            borderDash: [8, 4],
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }]
                     },
-                    scales: {
-                        x: { ticks: { color: '#64748b', font: { size: 10 } } },
-                        y: { ticks: { color: '#64748b', font: { size: 11 } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                labels: { color: '#94a3b8', font: { size: 12, weight: 700 }, padding: 15 },
+                                position: 'top'
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15,23,42,0.95)',
+                                titleColor: '#f59e0b',
+                                bodyColor: '#e2e8f0',
+                                borderColor: 'rgba(245,158,11,0.3)',
+                                borderWidth: 1,
+                                padding: 12
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#64748b', font: { size: 10 } } },
+                            y: { ticks: { color: '#64748b', font: { size: 11 } } }
+                        }
                     }
-                }
-            });
+                });
+                console.log('✅ Chart initialized');
+            } catch (error) {
+                console.error('❌ Chart init error:', error);
+                showError('Chart initialization failed');
+            }
         }
         
         function updateChart(actual, predicted) {
-            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            chartData.labels.push(time);
-            chartData.actual.push(actual);
-            chartData.predicted.push(predicted || actual);
-            
-            if (chartData.labels.length > 30) {
-                chartData.labels.shift();
-                chartData.actual.shift();
-                chartData.predicted.shift();
-            }
-            
-            if (chart) {
-                try {
-                    chart.update('none');
-                } catch (e) {
-                    console.error('Chart update error:', e);
+            try {
+                const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                chartData.labels.push(time);
+                chartData.actual.push(actual);
+                chartData.predicted.push(predicted || actual);
+                
+                if (chartData.labels.length > 30) {
+                    chartData.labels.shift();
+                    chartData.actual.shift();
+                    chartData.predicted.shift();
                 }
+                
+                if (chart) {
+                    chart.update('none');
+                }
+            } catch (error) {
+                console.error('❌ Chart update error:', error);
             }
         }
         
@@ -723,19 +753,39 @@
         }
         
         async function fetchBTCPrice() {
-            const response = await fetch(`${PYTH_API_URL}?ids[]=${PYTH_BTC_ID}`);
-            const data = await response.json();
-            if (data && data[0] && data[0].price) {
-                const p = data[0].price;
-                return {
-                    price: parseFloat(p.price) * Math.pow(10, p.expo),
-                    timestamp: Date.now()
-                };
+            try {
+                const response = await fetch(`${PYTH_API_URL}?ids[]=${PYTH_BTC_ID}`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
+                }
+                
+                const data = await response.json();
+                if (data && data[0] && data[0].price) {
+                    const p = data[0].price;
+                    return {
+                        price: parseFloat(p.price) * Math.pow(10, p.expo),
+                        timestamp: Date.now()
+                    };
+                }
+                throw new Error('Invalid data format');
+            } catch (error) {
+                console.error('❌ Fetch error:', error);
+                throw error;
             }
-            throw new Error('Invalid response');
         }
         
         async function update() {
+            if (updateInProgress) {
+                console.log('⏭️ Update already in progress, skipping...');
+                return;
+            }
+            
+            updateInProgress = true;
+            
             try {
                 const priceData = await fetchBTCPrice();
                 if (priceData && priceData.price) {
@@ -797,49 +847,56 @@
                 }
             } catch (error) {
                 console.error('❌ Update error:', error);
+                showError('Failed to update: ' + error.message);
+            } finally {
+                updateInProgress = false;
             }
         }
         
         function updateUI(priceData, prediction) {
-            const price = priceData.price;
-            document.getElementById('currentPrice').textContent = `$${price.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
-            document.getElementById('dataPoints').textContent = history.length;
-            
-            updateChart(price, prediction ? prediction.price : null);
-            
-            if (prediction) {
-                document.getElementById('predictedPrice').textContent = 
-                    `$${prediction.price.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-                document.getElementById('direction').textContent = prediction.direction;
-                document.getElementById('direction').style.color = 
-                    prediction.direction.includes('UP') ? '#10b981' : '#ef4444';
-                document.getElementById('confidenceText').textContent = 
-                    `Confidence: ${prediction.confidence.toFixed(0)}%`;
-            }
-            
-            const correct = evaluatedPredictions.filter(p => p.correct).length;
-            const total = evaluatedPredictions.length;
-            const accuracy = total > 0 ? (correct / total * 100) : 0;
-            
-            document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
-            document.getElementById('totalPredictions').textContent = total;
-            
-            const dataProgress = (history.length / MIN_DATA_FOR_TRAINING) * 100;
-            document.getElementById('trainingProgress').style.width = Math.min(dataProgress, 100) + '%';
-            
-            if (modelTrained) {
-                document.getElementById('modelStatus').textContent = '✅ AI Model Active';
-                document.getElementById('trainingInfo').textContent = 
-                    `${retrainCount} retrains • ${predictionsSinceRetrain} predictions since last retrain`;
-            } else if (history.length >= MIN_DATA_FOR_TRAINING && !isTraining) {
-                document.getElementById('trainBtn').style.display = 'block';
-                document.getElementById('modelStatus').textContent = '✅ Ready for Training';
-                document.getElementById('trainingInfo').textContent = `${history.length} points - Click to train`;
-            } else if (history.length < MIN_DATA_FOR_TRAINING) {
-                document.getElementById('modelStatus').textContent = 
-                    `Collecting... (${history.length}/${MIN_DATA_FOR_TRAINING})`;
-                document.getElementById('trainingInfo').textContent = 'Gathering data for training...';
+            try {
+                const price = priceData.price;
+                document.getElementById('currentPrice').textContent = `$${price.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                document.getElementById('lastUpdate').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+                document.getElementById('dataPoints').textContent = history.length;
+                
+                updateChart(price, prediction ? prediction.price : null);
+                
+                if (prediction) {
+                    document.getElementById('predictedPrice').textContent = 
+                        `$${prediction.price.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                    document.getElementById('direction').textContent = prediction.direction;
+                    document.getElementById('direction').style.color = 
+                        prediction.direction.includes('UP') ? '#10b981' : '#ef4444';
+                    document.getElementById('confidenceText').textContent = 
+                        `Confidence: ${prediction.confidence.toFixed(0)}%`;
+                }
+                
+                const correct = evaluatedPredictions.filter(p => p.correct).length;
+                const total = evaluatedPredictions.length;
+                const accuracy = total > 0 ? (correct / total * 100) : 0;
+                
+                document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
+                document.getElementById('totalPredictions').textContent = total;
+                
+                const dataProgress = (history.length / MIN_DATA_FOR_TRAINING) * 100;
+                document.getElementById('trainingProgress').style.width = Math.min(dataProgress, 100) + '%';
+                
+                if (modelTrained) {
+                    document.getElementById('modelStatus').textContent = '✅ AI Model Active';
+                    document.getElementById('trainingInfo').textContent = 
+                        `${retrainCount} retrains • ${predictionsSinceRetrain} predictions since last retrain`;
+                } else if (history.length >= MIN_DATA_FOR_TRAINING && !isTraining) {
+                    document.getElementById('trainBtn').style.display = 'block';
+                    document.getElementById('modelStatus').textContent = '✅ Ready for Training';
+                    document.getElementById('trainingInfo').textContent = `${history.length} points - Click to train`;
+                } else if (history.length < MIN_DATA_FOR_TRAINING) {
+                    document.getElementById('modelStatus').textContent = 
+                        `Collecting... (${history.length}/${MIN_DATA_FOR_TRAINING})`;
+                    document.getElementById('trainingInfo').textContent = 'Gathering data for training...';
+                }
+            } catch (error) {
+                console.error('❌ UI update error:', error);
             }
         }
         
@@ -980,15 +1037,11 @@
         
         setTimeout(() => {
             if (document.getElementById('content').style.display !== 'none') {
-                try {
-                    initChart();
-                } catch (e) {
-                    console.error('Chart init error:', e);
-                    setTimeout(() => initChart(), 1000);
-                }
+                initChart();
             }
         }, 500);
         
+        console.log('✅ Starting update loop...');
         update();
         setInterval(update, UPDATE_INTERVAL);
     </script>
