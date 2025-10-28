@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC Predictor v18 - FIXED</title>
+    <title>BTC Predictor v18 - ULTIMATE FIX</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -83,6 +83,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .file-input { display: none; }
         .error-banner { background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; color: #fca5a5; display: none; }
+        .warning-banner { background: rgba(245, 158, 11, 0.1); border: 2px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; color: #fbbf24; display: none; }
         @media (max-width: 1400px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -90,11 +91,12 @@
     <div class="container">
         <div class="header">
             <div class="logo">₿</div>
-            <h1>BTC Predictor v18<span class="ai-badge">🧠 FIXED</span><span class="fixed-badge">✅ NO OVERFIT</span></h1>
-            <div class="version">Enhanced LSTM • Anti-Whipsaw • Rare Retraining • Better Signals</div>
+            <h1>BTC Predictor v18<span class="ai-badge">🧠 ULTIMATE</span><span class="fixed-badge">✅ FINAL FIX</span></h1>
+            <div class="version">LSTM with Price Targets • Anti-Whipsaw • Rare Retraining</div>
         </div>
         <div id="errorBanner" class="error-banner"></div>
-        <div id="loading" class="loading"><div class="spinner"></div><p style="color: #64748b;">Initializing Fixed System...</p></div>
+        <div id="warningBanner" class="warning-banner"></div>
+        <div id="loading" class="loading"><div class="spinner"></div><p style="color: #64748b;">Initializing System...</p></div>
         <div id="content" style="display: none;">
             <div class="main-grid">
                 <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -124,14 +126,14 @@
                         <div class="section-title">💰 Trading Control</div>
                         <div class="input-group"><div class="input-label">Starting Balance ($)</div><input type="number" id="tradeAmount" class="input-field" value="1000" min="10" step="10"></div>
                         <div class="input-group"><div class="input-label">Leverage</div><div class="leverage-selector">
-                            <button class="leverage-btn" data-lev="1">1x</button><button class="leverage-btn" data-lev="2">2x</button><button class="leverage-btn active" data-lev="5">5x</button><button class="leverage-btn" data-lev="10">10x</button>
+                            <button class="leverage-btn" data-lev="1">1x</button><button class="leverage-btn active" data-lev="2">2x</button><button class="leverage-btn" data-lev="5">5x</button><button class="leverage-btn" data-lev="10">10x</button>
                         </div></div>
-                        <div class="input-group"><div class="input-label">Stop Loss (%)</div><input type="number" id="stopLoss" class="input-field" value="2" min="0.5" max="10" step="0.5"></div>
-                        <div class="input-group"><div class="input-label">Trailing Stop (%)</div><input type="number" id="trailingStop" class="input-field" value="1.5" min="0.5" max="5" step="0.5"></div>
+                        <div class="input-group"><div class="input-label">Stop Loss (%)</div><input type="number" id="stopLoss" class="input-field" value="1.5" min="0.5" max="10" step="0.5"></div>
+                        <div class="input-group"><div class="input-label">Trailing Stop (%)</div><input type="number" id="trailingStop" class="input-field" value="1" min="0.5" max="5" step="0.5"></div>
                         <button id="startTrading" class="trade-btn start">🚀 Start AI Trading</button>
                         <button id="stopTrading" class="trade-btn stop" style="display: none;">⏹️ Stop Trading</button>
                         <input type="file" id="importFile" class="file-input" accept=".json">
-                        <button id="importBtn" class="trade-btn import">📁 Import Old Data</button>
+                        <button id="importBtn" class="trade-btn import">📁 Import Price Data Only</button>
                         <div class="stats-grid">
                             <div class="stat-box"><div class="stat-label">Balance</div><div class="stat-value stat-neutral" id="currentBalance">$1000.00</div></div>
                             <div class="stat-box"><div class="stat-label">Net P&L</div><div class="stat-value stat-neutral" id="netPnL">$0.00</div></div>
@@ -144,7 +146,7 @@
                         <div class="live-position">
                             <div class="position-header">
                                 <div class="position-type" id="posType">LONG</div>
-                                <div style="font-size: 14px; font-weight: 700; color: #f59e0b;" id="posLeverage">5x</div>
+                                <div style="font-size: 14px; font-weight: 700; color: #f59e0b;" id="posLeverage">2x</div>
                             </div>
                             <div class="position-stats">
                                 <div class="position-stat"><div class="position-stat-label">Entry</div><div class="position-stat-value" id="posEntry">$--</div></div>
@@ -168,7 +170,7 @@
         </div>
     </div>
     <script>
-        console.log('🚀 BTC Predictor v18 FIXED Starting...');
+        console.log('🚀 BTC Predictor v18 ULTIMATE Starting...');
         
         function showError(message) {
             console.error('❌', message);
@@ -176,6 +178,13 @@
             banner.textContent = '❌ Error: ' + message;
             banner.style.display = 'block';
             setTimeout(() => { banner.style.display = 'none'; }, 5000);
+        }
+        
+        function showWarning(message) {
+            const banner = document.getElementById('warningBanner');
+            banner.textContent = '⚠️ ' + message;
+            banner.style.display = 'block';
+            setTimeout(() => { banner.style.display = 'none'; }, 8000);
         }
         
         if (typeof tf === 'undefined') showError('TensorFlow.js failed to load');
@@ -186,11 +195,12 @@
         const UPDATE_INTERVAL = 10000;
         const PREDICTION_WINDOW = 15;
         const MIN_DATA_FOR_TRAINING = 200;
-        const MIN_CONFIDENCE_TO_TRADE = 68; // Raised from 62
-        const RETRAIN_INTERVAL = 12 * 60 * 60 * 1000; // CHANGED: 12 hours instead of 4
-        const MIN_PREDICTIONS_FOR_RETRAIN = 100; // CHANGED: 100 instead of 20
-        const MIN_PRICE_MOVEMENT = 0.15; // ADDED: Minimum 0.15% predicted movement to trade
-        const MIN_POSITION_HOLD_TIME = 5 * 60 * 1000; // ADDED: Hold position minimum 5 minutes
+        const MIN_CONFIDENCE_TO_TRADE = 70; // Raised higher
+        const RETRAIN_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+        const MIN_PREDICTIONS_FOR_RETRAIN = 150;
+        const MIN_PRICE_MOVEMENT = 0.20; // RAISED: Minimum 0.20% predicted movement
+        const MIN_POSITION_HOLD_TIME = 10 * 60 * 1000; // 10 minutes minimum
+        const PRICE_SCALE_FACTOR = 100000; // NEW: Scale prices for better predictions
         
         let history = [];
         let predictions = [];
@@ -200,9 +210,9 @@
         let isTrading = false;
         let startingBalance = 1000;
         let currentBalance = 1000;
-        let leverage = 5;
-        let stopLossPercent = 2;
-        let trailingStopPercent = 1.5;
+        let leverage = 2; // Default to safer 2x
+        let stopLossPercent = 1.5;
+        let trailingStopPercent = 1;
         let position = null;
         let winCount = 0;
         let lossCount = 0;
@@ -216,7 +226,7 @@
         let updateInProgress = false;
         let lastPredictionDirection = null;
         let consecutiveSameDirection = 0;
-        let lastTradeTime = 0; // ADDED: Track last trade time
+        let lastTradeTime = 0;
         
         document.querySelectorAll('.leverage-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -239,8 +249,8 @@
             }
             startingBalance = parseFloat(document.getElementById('tradeAmount').value) || 1000;
             currentBalance = startingBalance;
-            stopLossPercent = parseFloat(document.getElementById('stopLoss').value) || 2;
-            trailingStopPercent = parseFloat(document.getElementById('trailingStop').value) || 1.5;
+            stopLossPercent = parseFloat(document.getElementById('stopLoss').value) || 1.5;
+            trailingStopPercent = parseFloat(document.getElementById('trailingStop').value) || 1;
             isTrading = true;
             winCount = 0;
             lossCount = 0;
@@ -270,7 +280,6 @@
         function openPosition(type, entry) {
             if (currentBalance <= 0) return;
             
-            // ADDED: Check minimum hold time from last trade
             const timeSinceLastTrade = Date.now() - lastTradeTime;
             if (timeSinceLastTrade < MIN_POSITION_HOLD_TIME) {
                 console.log('⏭️ Skipping trade - too soon since last trade');
@@ -474,7 +483,7 @@
             const secondAvg = secondHalf.reduce((a,b) => a+b) / secondHalf.length;
             
             const trendStrength = ((secondAvg - firstAvg) / firstAvg) * 100;
-            const trend = trendStrength > 0.1 ? 'bullish' : trendStrength < -0.1 ? 'bearish' : 'neutral';
+            const trend = trendStrength > 0.15 ? 'bullish' : trendStrength < -0.15 ? 'bearish' : 'neutral';
             
             return { rsi, trend, strength: Math.abs(trendStrength) };
         }
@@ -500,26 +509,26 @@
             await new Promise(resolve => setTimeout(resolve, 100));
             
             try {
-                const maxTrainingPoints = 500;
-                const trainingData = isInitial 
-                    ? history.slice(-Math.min(history.length, maxTrainingPoints))
-                    : history.slice(-Math.min(history.length, 300));
+                const maxTrainingPoints = 400;
+                const trainingData = history.slice(-Math.min(history.length, maxTrainingPoints));
                 
                 console.log('📊 Training with', trainingData.length, 'data points');
                 
-                const data = normalizeData(trainingData);
+                // NEW: Scale prices relative to their range
+                const mean = trainingData.reduce((a,b) => a+b) / trainingData.length;
+                const scaledData = trainingData.map(p => (p - mean) / mean);
                 
-                const seqLength = 20;
+                const seqLength = 30; // Increased from 20
                 const X = [];
                 const y = [];
                 
-                for (let i = 0; i <= data.length - seqLength - 1; i++) {
+                for (let i = 0; i <= scaledData.length - seqLength - 1; i++) {
                     const seq = [];
                     for (let j = 0; j < seqLength; j++) {
-                        seq.push([data[i + j]]);
+                        seq.push([scaledData[i + j]]);
                     }
                     X.push(seq);
-                    y.push([data[i + seqLength]]);
+                    y.push([scaledData[i + seqLength]]);
                 }
                 
                 console.log('📊 Created', X.length, 'training sequences');
@@ -532,34 +541,34 @@
                     aiModel = tf.sequential();
                     
                     aiModel.add(tf.layers.lstm({
-                        units: 64,
+                        units: 80, // Increased
                         returnSequences: true,
                         inputShape: [seqLength, 1],
                         kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
                     }));
-                    aiModel.add(tf.layers.dropout({ rate: 0.2 }));
+                    aiModel.add(tf.layers.dropout({ rate: 0.25 }));
                     aiModel.add(tf.layers.lstm({
-                        units: 32,
+                        units: 40,
                         returnSequences: false,
                         kernelRegularizer: tf.regularizers.l2({ l2: 0.001 })
                     }));
                     aiModel.add(tf.layers.dropout({ rate: 0.2 }));
-                    aiModel.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+                    aiModel.add(tf.layers.dense({ units: 20, activation: 'relu' }));
                     aiModel.add(tf.layers.dense({ units: 1 }));
                     
                     aiModel.compile({
-                        optimizer: tf.train.adam(0.001),
+                        optimizer: tf.train.adam(0.0015), // Slightly higher learning rate
                         loss: 'meanSquaredError',
                         metrics: ['mae']
                     });
                 }
                 
-                const epochs = isInitial ? 50 : 25;
+                const epochs = isInitial ? 60 : 30;
                 console.log('🎯 Training for', epochs, 'epochs');
                 
                 await aiModel.fit(xTensor, yTensor, {
                     epochs: epochs,
-                    batchSize: 32,
+                    batchSize: 16, // Smaller batch
                     validationSplit: 0.15,
                     shuffle: true,
                     callbacks: {
@@ -567,7 +576,7 @@
                             const progress = ((epoch + 1) / epochs) * 100;
                             document.getElementById('trainingProgress').style.width = progress + '%';
                             document.getElementById('trainingInfo').textContent = 
-                                `${statusPrefix} - Epoch ${epoch + 1}/${epochs} - Loss: ${logs.loss.toFixed(4)}`;
+                                `${statusPrefix} - Epoch ${epoch + 1}/${epochs} - Loss: ${logs.loss.toFixed(5)}`;
                             
                             if ((epoch + 1) % 5 === 0) {
                                 await tf.nextFrame();
@@ -610,9 +619,8 @@
         function shouldRetrain() {
             if (!modelTrained) return false;
             
-            // CHANGED: Only retrain every 12 hours OR after 100 predictions
             if (lastRetrainTime && (Date.now() - lastRetrainTime >= RETRAIN_INTERVAL)) {
-                console.log('🔄 Scheduled retrain (12 hours passed)');
+                console.log('🔄 Scheduled retrain (24 hours passed)');
                 return true;
             }
             
@@ -624,45 +632,32 @@
             return false;
         }
         
-        function normalizeData(data) {
-            const mean = data.reduce((a, b) => a + b, 0) / data.length;
-            const variance = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / data.length;
-            const std = Math.sqrt(variance) + 0.0001;
-            return data.map(val => (val - mean) / std);
-        }
-        
-        function denormalizeData(normalizedVal, originalData) {
-            const mean = originalData.reduce((a, b) => a + b, 0) / originalData.length;
-            const variance = originalData.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / originalData.length;
-            const std = Math.sqrt(variance);
-            return (normalizedVal * std) + mean;
-        }
-        
         async function predictWithAI(currentPrice) {
-            if (!aiModel || !modelTrained || history.length < 20) return null;
+            if (!aiModel || !modelTrained || history.length < 30) return null;
             
             try {
-                const recentData = history.slice(-200);
-                const normalizedHistory = normalizeData(recentData);
+                const recentData = history.slice(-400);
+                const mean = recentData.reduce((a,b) => a+b) / recentData.length;
+                const scaledHistory = recentData.map(p => (p - mean) / mean);
                 
-                const seqLength = 20;
+                const seqLength = 30;
                 const sequence = [];
                 for (let i = 0; i < seqLength; i++) {
-                    sequence.push([normalizedHistory[normalizedHistory.length - seqLength + i]]);
+                    sequence.push([scaledHistory[scaledHistory.length - seqLength + i]]);
                 }
                 
                 const inputTensor = tf.tensor3d([sequence]);
                 const prediction = aiModel.predict(inputTensor);
-                const normalizedPred = await prediction.data();
+                const scaledPred = await prediction.data();
                 
                 inputTensor.dispose();
                 prediction.dispose();
                 
-                const predictedPrice = denormalizeData(normalizedPred[0], recentData);
+                // Convert back to actual price
+                const predictedPrice = (scaledPred[0] * mean) + mean;
                 
                 const momentum = calculateMomentum(history);
                 
-                // CHANGED: Enhanced confidence calculation
                 const confidence = calculateEnhancedConfidence(predictedPrice, currentPrice, recentData, momentum);
                 
                 const direction = predictedPrice > currentPrice ? 'UP' : 'DOWN';
@@ -680,13 +675,20 @@
                     setTimeout(() => trainAIModel(false), 2000);
                 }
                 
+                const priceMovement = Math.abs((predictedPrice - currentPrice) / currentPrice) * 100;
+                
+                // Warn if prediction is too close
+                if (priceMovement < 0.05) {
+                    console.log('⚠️ Warning: Prediction too close to current price');
+                }
+                
                 return {
                     price: predictedPrice,
                     direction: direction === 'UP' ? 'UP ⬆️' : 'DOWN ⬇️',
                     confidence: confidence,
                     momentum: momentum,
                     consecutiveCount: consecutiveSameDirection,
-                    priceMovement: Math.abs((predictedPrice - currentPrice) / currentPrice) * 100,
+                    priceMovement: priceMovement,
                     timestamp: Date.now(),
                     targetTime: Date.now() + (PREDICTION_WINDOW * 60 * 1000)
                 };
@@ -709,34 +711,35 @@
             
             let confidence = 50;
             
-            if (percentDiff > avgVolatility * 0.5 && percentDiff < avgVolatility * 2.5) {
-                confidence = 75;
-            } else if (percentDiff > avgVolatility * 0.3 && percentDiff < avgVolatility * 3) {
-                confidence = 68;
-            } else if (percentDiff > avgVolatility * 0.1) {
-                confidence = 60;
+            // Better confidence scaling
+            if (percentDiff > avgVolatility * 0.8 && percentDiff < avgVolatility * 2) {
+                confidence = 78;
+            } else if (percentDiff > avgVolatility * 0.5 && percentDiff < avgVolatility * 3) {
+                confidence = 70;
+            } else if (percentDiff > avgVolatility * 0.3) {
+                confidence = 62;
             }
             
-            if (percentDiff > 0.3) confidence += 3;
-            if (percentDiff > 0.6) confidence += 3;
+            if (percentDiff > 0.4) confidence += 4;
+            if (percentDiff > 0.7) confidence += 4;
             
             const predictedDir = predicted > current ? 'bullish' : 'bearish';
             if (predictedDir === momentum.trend) {
-                confidence += 5;
+                confidence += 6;
             }
             
-            if (momentum.strength > 0.5) {
-                confidence += 3;
+            if (momentum.strength > 0.4) {
+                confidence += 4;
             }
             
-            if (momentum.rsi > 70 && predicted < current) confidence += 4;
-            if (momentum.rsi < 30 && predicted > current) confidence += 4;
+            if (momentum.rsi > 70 && predicted < current) confidence += 5;
+            if (momentum.rsi < 30 && predicted > current) confidence += 5;
             
-            // ADDED: Penalize predictions too close to current price
-            if (percentDiff < 0.1) confidence -= 15;
-            if (percentDiff < 0.05) confidence -= 20;
+            // HEAVY penalty for tiny predictions
+            if (percentDiff < 0.08) confidence -= 25;
+            if (percentDiff < 0.05) confidence -= 30;
             
-            return Math.min(Math.max(confidence, 45), 88);
+            return Math.min(Math.max(confidence, 40), 90);
         }
         
         function initChart() {
@@ -894,27 +897,24 @@
                     
                     updateUI(priceData, prediction);
                     
-                    // IMPROVED: Much stricter trading conditions
                     if (isTrading && currentBalance > 0 && prediction) {
                         const momentumAligned = 
                             (prediction.direction.includes('UP') && prediction.momentum.trend !== 'bearish') ||
                             (prediction.direction.includes('DOWN') && prediction.momentum.trend !== 'bullish');
                         
-                        // CHANGED: Require significant price movement prediction
                         const significantMove = prediction.priceMovement >= MIN_PRICE_MOVEMENT;
                         
                         const shouldTrade = prediction.confidence >= MIN_CONFIDENCE_TO_TRADE && 
                                           momentumAligned &&
                                           significantMove &&
-                                          (prediction.consecutiveCount >= 2 || prediction.confidence >= 75);
+                                          (prediction.consecutiveCount >= 3 || prediction.confidence >= 78);
                         
                         if (position) {
                             updateTrailingStop(price);
                             checkStopLoss(price);
                             updateLivePosition();
                             
-                            // CHANGED: Only close if strong opposite signal
-                            if (shouldTrade && prediction.confidence >= 72) {
+                            if (shouldTrade && prediction.confidence >= 75) {
                                 const shouldClose = 
                                     (position.type === 'long' && prediction.direction.includes('DOWN')) ||
                                     (position.type === 'short' && prediction.direction.includes('UP'));
@@ -928,7 +928,7 @@
                         } else {
                             if (shouldTrade) {
                                 const type = prediction.direction.includes('UP') ? 'long' : 'short';
-                                console.log('🎯 Opening trade - Conf:', prediction.confidence, 'Move:', prediction.priceMovement.toFixed(3) + '%');
+                                console.log('🎯 Opening trade - Conf:', prediction.confidence.toFixed(0) + '%', 'Move:', prediction.priceMovement.toFixed(3) + '%');
                                 openPosition(type, price);
                             }
                         }
@@ -938,9 +938,9 @@
                     document.getElementById('content').style.display = 'block';
                     
                     if (history.length >= MIN_DATA_FOR_TRAINING && !modelTrained && !isTraining) {
-                        const shouldAsk = localStorage.getItem('btc-v18-train-asked');
+                        const shouldAsk = localStorage.getItem('btc-v18-ultimate-train-asked');
                         if (!shouldAsk) {
-                            localStorage.setItem('btc-v18-train-asked', 'true');
+                            localStorage.setItem('btc-v18-ultimate-train-asked', 'true');
                             setTimeout(() => {
                                 if (confirm(`🧠 AI Model Ready!\n\n${history.length} data points collected.\n\nStart training now?`)) {
                                     trainAIModel(true);
@@ -976,6 +976,11 @@
                     
                     const momentumText = `RSI: ${prediction.momentum.rsi.toFixed(0)} • Trend: ${prediction.momentum.trend} • Streak: ${prediction.consecutiveCount}`;
                     document.getElementById('momentumText').textContent = momentumText;
+                    
+                    // Warn if prediction is weak
+                    if (prediction.priceMovement < 0.1) {
+                        showWarning(`Weak prediction detected (${prediction.priceMovement.toFixed(3)}% move). Model may need retraining with more volatile data.`);
+                    }
                 }
                 
                 const correct = evaluatedPredictions.filter(p => p.correct).length;
@@ -1015,49 +1020,28 @@
                 const text = await file.text();
                 const data = JSON.parse(text);
                 
+                // ONLY import price history, nothing else
                 if (data.history && Array.isArray(data.history)) {
                     history = data.history;
                     console.log('✅ Imported', history.length, 'price history points');
                 }
                 
-                if (data.trades && Array.isArray(data.trades)) {
-                    trades = data.trades.slice(0, 50).map(trade => {
-                        if (trade.time && typeof trade.time === 'string') {
-                            trade.time = new Date(trade.time);
-                        }
-                        if (trade.closeTime && typeof trade.closeTime === 'string') {
-                            trade.closeTime = new Date(trade.closeTime);
-                        }
-                        return trade;
-                    });
-                    updateTradeLog();
-                    console.log('✅ Imported', trades.length, 'trades');
-                }
-                
-                if (data.trading) {
-                    if (data.trading.winCount !== undefined) winCount = data.trading.winCount;
-                    if (data.trading.liqCount !== undefined) lossCount = data.trading.liqCount;
-                    if (data.trading.lossCount !== undefined) lossCount = data.trading.lossCount;
-                }
-                
-                if (data.evaluatedPredictions && Array.isArray(data.evaluatedPredictions)) {
-                    evaluatedPredictions = data.evaluatedPredictions.slice(-100);
-                    console.log('✅ Imported', evaluatedPredictions.length, 'evaluated predictions');
-                }
-                
-                // DON'T import retrain count to start fresh
+                // Reset everything else
                 retrainCount = 0;
+                trades = [];
+                evaluatedPredictions = [];
+                winCount = 0;
+                lossCount = 0;
                 
-                alert(`✅ Data imported successfully!\n\n• ${history.length} price points\n• ${trades.length} trades\n• ${evaluatedPredictions.length} predictions\n\n⚠️ Retrain counter reset to prevent overfit`);
+                if (aiModel) {
+                    aiModel.dispose();
+                    aiModel = null;
+                }
+                modelTrained = false;
+                
+                alert(`✅ Price history imported successfully!\n\n• ${history.length} price points loaded\n• Model reset - ready for fresh training\n• All old trades/predictions cleared`);
                 
                 updateTradingUI();
-                
-                const correct = evaluatedPredictions.filter(p => p.correct).length;
-                const total = evaluatedPredictions.length;
-                const accuracy = total > 0 ? (correct / total * 100) : 0;
-                document.getElementById('accuracy').textContent = accuracy.toFixed(1) + '%';
-                document.getElementById('totalPredictions').textContent = total;
-                
                 document.getElementById('importFile').value = '';
                 
             } catch (error) {
@@ -1072,7 +1056,7 @@
             
             const data = {
                 metadata: {
-                    version: "18.0 FIXED - No Overfit",
+                    version: "18.0 ULTIMATE FIX",
                     exportDate: new Date().toISOString()
                 },
                 history,
@@ -1103,7 +1087,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `btc-v18-fixed-${Date.now()}.json`;
+            a.download = `btc-v18-ultimate-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -1128,8 +1112,8 @@
                 }
                 modelTrained = false;
                 
-                localStorage.removeItem('btc-v18');
-                localStorage.removeItem('btc-v18-train-asked');
+                localStorage.removeItem('btc-v18-ultimate');
+                localStorage.removeItem('btc-v18-ultimate-train-asked');
                 
                 setTimeout(() => location.reload(), 500);
             }
