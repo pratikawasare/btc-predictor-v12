@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC Predictor v18 - Enhanced & Optimized</title>
+    <title>BTC Predictor v18 - FIXED</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -66,7 +66,7 @@
         .price-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; font-weight: 600; margin-bottom: 12px; }
         .price-value { font-size: 36px; font-weight: 800; color: #f59e0b; margin-bottom: 8px; }
         .pulse { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-left: 8px; animation: pulse 2s infinite; box-shadow: 0 0 10px #10b981; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3%; } }
         .chart-card { height: 400px; }
         .chart-container { position: relative; height: calc(100% - 45px); }
         .trade-log { max-height: 400px; overflow-y: auto; }
@@ -90,11 +90,11 @@
     <div class="container">
         <div class="header">
             <div class="logo">₿</div>
-            <h1>BTC Predictor v18<span class="ai-badge">🧠 OPTIMIZED</span><span class="fixed-badge">✅ FIXED</span></h1>
-            <div class="version">Enhanced LSTM • Momentum Indicators • Smart Signals • Import Data</div>
+            <h1>BTC Predictor v18<span class="ai-badge">🧠 FIXED</span><span class="fixed-badge">✅ NO OVERFIT</span></h1>
+            <div class="version">Enhanced LSTM • Anti-Whipsaw • Rare Retraining • Better Signals</div>
         </div>
         <div id="errorBanner" class="error-banner"></div>
-        <div id="loading" class="loading"><div class="spinner"></div><p style="color: #64748b;">Initializing Enhanced System...</p></div>
+        <div id="loading" class="loading"><div class="spinner"></div><p style="color: #64748b;">Initializing Fixed System...</p></div>
         <div id="content" style="display: none;">
             <div class="main-grid">
                 <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -168,7 +168,7 @@
         </div>
     </div>
     <script>
-        console.log('🚀 BTC Predictor v18 Starting...');
+        console.log('🚀 BTC Predictor v18 FIXED Starting...');
         
         function showError(message) {
             console.error('❌', message);
@@ -186,9 +186,11 @@
         const UPDATE_INTERVAL = 10000;
         const PREDICTION_WINDOW = 15;
         const MIN_DATA_FOR_TRAINING = 200;
-        const MIN_CONFIDENCE_TO_TRADE = 62;
-        const RETRAIN_INTERVAL = 4 * 60 * 60 * 1000;
-        const MIN_PREDICTIONS_FOR_RETRAIN = 20;
+        const MIN_CONFIDENCE_TO_TRADE = 68; // Raised from 62
+        const RETRAIN_INTERVAL = 12 * 60 * 60 * 1000; // CHANGED: 12 hours instead of 4
+        const MIN_PREDICTIONS_FOR_RETRAIN = 100; // CHANGED: 100 instead of 20
+        const MIN_PRICE_MOVEMENT = 0.15; // ADDED: Minimum 0.15% predicted movement to trade
+        const MIN_POSITION_HOLD_TIME = 5 * 60 * 1000; // ADDED: Hold position minimum 5 minutes
         
         let history = [];
         let predictions = [];
@@ -214,6 +216,7 @@
         let updateInProgress = false;
         let lastPredictionDirection = null;
         let consecutiveSameDirection = 0;
+        let lastTradeTime = 0; // ADDED: Track last trade time
         
         document.querySelectorAll('.leverage-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -242,6 +245,7 @@
             winCount = 0;
             lossCount = 0;
             trades = [];
+            lastTradeTime = 0;
             document.getElementById('startTrading').style.display = 'none';
             document.getElementById('stopTrading').style.display = 'block';
             document.getElementById('tradeAmount').disabled = true;
@@ -265,6 +269,14 @@
         
         function openPosition(type, entry) {
             if (currentBalance <= 0) return;
+            
+            // ADDED: Check minimum hold time from last trade
+            const timeSinceLastTrade = Date.now() - lastTradeTime;
+            if (timeSinceLastTrade < MIN_POSITION_HOLD_TIME) {
+                console.log('⏭️ Skipping trade - too soon since last trade');
+                return;
+            }
+            
             const tradeAmount = currentBalance * 0.95;
             const stopLoss = type === 'long' 
                 ? entry * (1 - stopLossPercent / 100)
@@ -281,6 +293,7 @@
                 highestPrice: entry,
                 lowestPrice: entry
             };
+            lastTradeTime = Date.now();
             console.log('📈 Opened', type.toUpperCase(), 'position at $' + entry.toFixed(2));
             updateLivePosition();
         }
@@ -319,6 +332,7 @@
             
             console.log('🔚 Closed', position.type.toUpperCase(), 'P&L:', pnl.toFixed(2), 'Reason:', reason);
             position = null;
+            lastTradeTime = Date.now();
             document.getElementById('livePositionCard').style.display = 'none';
             updateTradingUI();
             updateTradeLog();
@@ -435,13 +449,11 @@
             document.getElementById('tradeLog').innerHTML = html;
         }
         
-        // ACCURACY IMPROVEMENT: Calculate momentum indicators
         function calculateMomentum(prices) {
             if (prices.length < 20) return { rsi: 50, trend: 'neutral', strength: 0 };
             
             const recentPrices = prices.slice(-20);
             
-            // Calculate RSI
             const changes = [];
             for (let i = 1; i < recentPrices.length; i++) {
                 changes.push(recentPrices[i] - recentPrices[i-1]);
@@ -456,7 +468,6 @@
             const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
             const rsi = 100 - (100 / (1 + rs));
             
-            // Calculate trend strength
             const firstHalf = recentPrices.slice(0, 10);
             const secondHalf = recentPrices.slice(10);
             const firstAvg = firstHalf.reduce((a,b) => a+b) / firstHalf.length;
@@ -575,7 +586,7 @@
                 predictionsSinceRetrain = 0;
                 
                 const statusMsg = isInitial 
-                    ? '✅ Enhanced AI Trained Successfully!'
+                    ? '✅ AI Trained Successfully!'
                     : `🔄 Retrained! (Cycle #${retrainCount})`;
                 
                 document.getElementById('modelStatus').textContent = statusMsg;
@@ -599,8 +610,9 @@
         function shouldRetrain() {
             if (!modelTrained) return false;
             
+            // CHANGED: Only retrain every 12 hours OR after 100 predictions
             if (lastRetrainTime && (Date.now() - lastRetrainTime >= RETRAIN_INTERVAL)) {
-                console.log('🔄 Scheduled retrain (4 hours passed)');
+                console.log('🔄 Scheduled retrain (12 hours passed)');
                 return true;
             }
             
@@ -648,15 +660,13 @@
                 
                 const predictedPrice = denormalizeData(normalizedPred[0], recentData);
                 
-                // ACCURACY IMPROVEMENT: Get momentum indicators
                 const momentum = calculateMomentum(history);
                 
-                // ACCURACY IMPROVEMENT: Calculate enhanced confidence
+                // CHANGED: Enhanced confidence calculation
                 const confidence = calculateEnhancedConfidence(predictedPrice, currentPrice, recentData, momentum);
                 
                 const direction = predictedPrice > currentPrice ? 'UP' : 'DOWN';
                 
-                // ACCURACY IMPROVEMENT: Track consecutive same direction predictions
                 if (lastPredictionDirection === direction) {
                     consecutiveSameDirection++;
                 } else {
@@ -676,6 +686,7 @@
                     confidence: confidence,
                     momentum: momentum,
                     consecutiveCount: consecutiveSameDirection,
+                    priceMovement: Math.abs((predictedPrice - currentPrice) / currentPrice) * 100,
                     timestamp: Date.now(),
                     targetTime: Date.now() + (PREDICTION_WINDOW * 60 * 1000)
                 };
@@ -686,7 +697,6 @@
             }
         }
         
-        // ACCURACY IMPROVEMENT: Enhanced confidence with momentum
         function calculateEnhancedConfidence(predicted, current, recentData, momentum) {
             const percentDiff = Math.abs((predicted - current) / current) * 100;
             
@@ -710,20 +720,21 @@
             if (percentDiff > 0.3) confidence += 3;
             if (percentDiff > 0.6) confidence += 3;
             
-            // ACCURACY IMPROVEMENT: Boost confidence when prediction aligns with momentum
             const predictedDir = predicted > current ? 'bullish' : 'bearish';
             if (predictedDir === momentum.trend) {
                 confidence += 5;
             }
             
-            // ACCURACY IMPROVEMENT: Boost confidence for strong momentum
             if (momentum.strength > 0.5) {
                 confidence += 3;
             }
             
-            // ACCURACY IMPROVEMENT: RSI extreme zones
-            if (momentum.rsi > 70 && predicted < current) confidence += 4; // Overbought, predicting down
-            if (momentum.rsi < 30 && predicted > current) confidence += 4; // Oversold, predicting up
+            if (momentum.rsi > 70 && predicted < current) confidence += 4;
+            if (momentum.rsi < 30 && predicted > current) confidence += 4;
+            
+            // ADDED: Penalize predictions too close to current price
+            if (percentDiff < 0.1) confidence -= 15;
+            if (percentDiff < 0.05) confidence -= 20;
             
             return Math.min(Math.max(confidence, 45), 88);
         }
@@ -883,27 +894,33 @@
                     
                     updateUI(priceData, prediction);
                     
-                    // ACCURACY IMPROVEMENT: Only trade on high confidence + momentum alignment
+                    // IMPROVED: Much stricter trading conditions
                     if (isTrading && currentBalance > 0 && prediction) {
                         const momentumAligned = 
                             (prediction.direction.includes('UP') && prediction.momentum.trend !== 'bearish') ||
                             (prediction.direction.includes('DOWN') && prediction.momentum.trend !== 'bullish');
                         
+                        // CHANGED: Require significant price movement prediction
+                        const significantMove = prediction.priceMovement >= MIN_PRICE_MOVEMENT;
+                        
                         const shouldTrade = prediction.confidence >= MIN_CONFIDENCE_TO_TRADE && 
-                                          (momentumAligned || prediction.consecutiveCount >= 2);
+                                          momentumAligned &&
+                                          significantMove &&
+                                          (prediction.consecutiveCount >= 2 || prediction.confidence >= 75);
                         
                         if (position) {
                             updateTrailingStop(price);
                             checkStopLoss(price);
                             updateLivePosition();
                             
-                            if (shouldTrade) {
+                            // CHANGED: Only close if strong opposite signal
+                            if (shouldTrade && prediction.confidence >= 72) {
                                 const shouldClose = 
                                     (position.type === 'long' && prediction.direction.includes('DOWN')) ||
                                     (position.type === 'short' && prediction.direction.includes('UP'));
                                 
                                 if (shouldClose) {
-                                    closePosition('AI Signal Change', price);
+                                    closePosition('Strong AI Signal Change', price);
                                     const newType = prediction.direction.includes('UP') ? 'long' : 'short';
                                     if (currentBalance > 0) openPosition(newType, price);
                                 }
@@ -911,6 +928,7 @@
                         } else {
                             if (shouldTrade) {
                                 const type = prediction.direction.includes('UP') ? 'long' : 'short';
+                                console.log('🎯 Opening trade - Conf:', prediction.confidence, 'Move:', prediction.priceMovement.toFixed(3) + '%');
                                 openPosition(type, price);
                             }
                         }
@@ -954,9 +972,8 @@
                     document.getElementById('direction').style.color = 
                         prediction.direction.includes('UP') ? '#10b981' : '#ef4444';
                     document.getElementById('confidenceText').textContent = 
-                        `Confidence: ${prediction.confidence.toFixed(0)}%`;
+                        `Confidence: ${prediction.confidence.toFixed(0)}% • Move: ${prediction.priceMovement.toFixed(2)}%`;
                     
-                    // ACCURACY IMPROVEMENT: Show momentum info
                     const momentumText = `RSI: ${prediction.momentum.rsi.toFixed(0)} • Trend: ${prediction.momentum.trend} • Streak: ${prediction.consecutiveCount}`;
                     document.getElementById('momentumText').textContent = momentumText;
                 }
@@ -973,8 +990,9 @@
                 
                 if (modelTrained) {
                     document.getElementById('modelStatus').textContent = '✅ AI Model Active';
+                    const hoursUntilRetrain = Math.max(0, (RETRAIN_INTERVAL - (Date.now() - lastRetrainTime)) / (1000 * 60 * 60)).toFixed(1);
                     document.getElementById('trainingInfo').textContent = 
-                        `${retrainCount} retrains • ${predictionsSinceRetrain} predictions since last retrain`;
+                        `${retrainCount} retrains • Next in ${hoursUntilRetrain}h`;
                 } else if (history.length >= MIN_DATA_FOR_TRAINING && !isTraining) {
                     document.getElementById('trainBtn').style.display = 'block';
                     document.getElementById('modelStatus').textContent = '✅ Ready for Training';
@@ -1027,14 +1045,10 @@
                     console.log('✅ Imported', evaluatedPredictions.length, 'evaluated predictions');
                 }
                 
-                if (data.aiStatus) {
-                    if (data.aiStatus.retrainCount !== undefined) {
-                        retrainCount = data.aiStatus.retrainCount;
-                        document.getElementById('retrainCount').textContent = retrainCount;
-                    }
-                }
+                // DON'T import retrain count to start fresh
+                retrainCount = 0;
                 
-                alert(`✅ Data imported successfully!\n\n• ${history.length} price points\n• ${trades.length} trades\n• ${evaluatedPredictions.length} predictions\n• ${retrainCount} retrain cycles`);
+                alert(`✅ Data imported successfully!\n\n• ${history.length} price points\n• ${trades.length} trades\n• ${evaluatedPredictions.length} predictions\n\n⚠️ Retrain counter reset to prevent overfit`);
                 
                 updateTradingUI();
                 
@@ -1058,7 +1072,7 @@
             
             const data = {
                 metadata: {
-                    version: "18.0 Enhanced & Optimized",
+                    version: "18.0 FIXED - No Overfit",
                     exportDate: new Date().toISOString()
                 },
                 history,
@@ -1089,7 +1103,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `btc-v18-${Date.now()}.json`;
+            a.download = `btc-v18-fixed-${Date.now()}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
