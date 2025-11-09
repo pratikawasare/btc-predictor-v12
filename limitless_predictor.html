@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limitless Prediction AI - Hourly Markets</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            min-height: 100vh; 
+            padding: 20px; 
+            color: #e2e8f0; 
+        }
+        
+        .container { max-width: 2000px; margin: 0 auto; }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        
+        .logo { 
+            font-size: 48px; 
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float { 
+            0%, 100% { transform: translateY(0); } 
+            50% { transform: translateY(-10px); } 
+        }
+        
+        h1 { 
+            font-size: 42px; 
+            font-weight: 800; 
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+        
+        .subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        
+        .badges {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            animation: pulse-glow 2s infinite;
+        }
+        
+        .badge-gbm { 
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .badge-ai { 
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .badge-limitless {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        @keyframes pulse-glow { 
+            0%, 100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.3); } 
+            50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); } 
+        }
+        
+        .main-grid { 
+            display: grid; 
+            grid-template-columns: 2fr 1.2fr 1fr;
+            gap: 20px; 
+            margin-bottom: 20px;
+        }
+        
+        .card { 
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover { 
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .section-title { 
+            font-size: 12px; 
+            font-weight: 700; 
+            color: #e2e8f0; 
+            margin-bottom: 18px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .market-scanner {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .market-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 2px solid rgba(99, 102, 241, 0.2);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .market-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+        }
+        
+        .market-strike {
+            font-size: 20px;
+            font-weight: 800;
+            color: #6366f1;
+            margin-bottom: 8px;
+        }
+        
+        .market-timer {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 12px;
+        }
+        
+        .prob-display {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+        
+        .prob-yes {
+            flex: 1;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #10b981;
+        }
+        
+        .prob-no {
+            flex: 1;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #ef4444;
+        }
+        
+        .price-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .price-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .price-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+        }
+        
+        .price-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .price-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #6366f1;
+            margin-bottom: 8px;
+        }
+        
+        .price-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 8px;
+        }
+        
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 10px #10b981;
+        }
+        
+        @keyframes pulse { 
+            0%, 100% { opacity: 1; } 
+            50% { opacity: 0.3; } 
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-label {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            display: block;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .stat-box {
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+        }
+        
+        .stat-positive { color: #10b981; }
+        .stat-negative { color: #ef4444; }
+        .stat-neutral { color: #6366f1; }
+        
+        .prediction-panel {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-top: 15px;
+        }
+        
+        .kelly-calculator {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .kelly-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .kelly-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .kelly-label {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        
+        .kelly-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #10b981;
+        }
+        
+        .market-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .market-item {
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .market-item:hover {
+            background: rgba(30, 41, 59, 0.5);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        
+        .market-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .market-item-strike {
+            font-weight: 700;
+            color: #6366f1;
+        }
+        
+        .market-item-time {
+            font-size: 10px;
+            color: #64748b;
+        }
+        
+        .market-item-probs {
+            display: flex;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .market-item-yes {
+            color: #10b981;
+        }
+        
+        .market-item-no {
+            color: #ef4444;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 100px 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(99, 102, 241, 0.1);
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 1400px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎯</div>
+            <h1>Limitless AI Predictor</h1>
+            <div class="subtitle">Hourly Market Predictions with Jump-Diffusion GBM</div>
+            <div class="badges">
+                <span class="badge badge-gbm">🌊 Jump-Diffusion GBM</span>
+                <span class="badge badge-ai">🧠 LSTM AI</span>
+                <span class="badge badge-limitless">💎 Limitless Ready</span>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p style="color: #64748b;">Initializing prediction engine...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Market Scanner -->
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="section-title">⏰ Hourly Market Scanner</div>
+                <div class="market-scanner" id="marketScanner"></div>
+            </div>
+
+            <div class="main-grid">
+                <!-- Left: Analysis & Chart -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="price-section">
+                        <div class="price-card">
+                            <div class="price-label">Current Price <span class="pulse"></span></div>
+                            <div class="price-value" id="currentPrice">$--</div>
+                            <div class="price-subtitle" id="priceTime">--</div>
+                        </div>
+                        <div class="price-card">
+                            <div class="price-label">1-Hour Forecast</div>
+                            <div class="price-value" id="forecastPrice">$--</div>
+                            <div class="price-subtitle" id="priceMove">--</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">📊 AI Prediction Analysis</div>
+                        <div id="predictionPanel" class="prediction-panel">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span style="font-size: 14px; color: #94a3b8;">Confidence Score</span>
+                                <span style="font-size: 18px; font-weight: 800; color: #6366f1;" id="confidenceScore">--</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px;">
+                                <div style="background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">UP Probability</div>
+                                    <div style="font-size: 18px; font-weight: 700; color: #10b981;" id="probUp">--%</div>
+                                </div>
+                                <div style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">DOWN Probability</div>
+                                    <div style="font-size: 18px; font-weight: 700; color: #ef4444;" id="probDown">--%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">📈 Price Projection Chart</div>
+                        <div class="chart-container">
+                            <canvas id="projectionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle: Model Status & Streaming -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="card">
+                        <div class="section-title">🧠 Model Status</div>
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <div style="font-size: 14px; font-weight: 700; color: #8b5cf6; margin-bottom: 10px;" id="modelStatus">Initializing...</div>
+                            <div style="font-size: 11px; color: #64748b;" id="modelInfo">Loading data...</div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Data Points</div>
+                                <div class="stat-value stat-neutral" id="dataPoints">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Predictions</div>
+                                <div class="stat-value stat-neutral" id="predictionCount">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Accuracy</div>
+                                <div class="stat-value stat-neutral" id="accuracy">--%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Retrains</div>
+                                <div class="stat-value stat-neutral" id="retrainCount">0</div>
+                            </div>
+                        </div>
+                        <div class="button-group" style="margin-top: 15px;">
+                            <button id="trainBtn" class="btn btn-primary" style="display: none;">Train Model</button>
+                            <button id="startBtn" class="btn btn-secondary">▶ Start</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">⚙️ Monte Carlo Simulation</div>
+                        <div id="monteCarloResults"></div>
+                    </div>
+                </div>
+
+                <!-- Right: Position & Trading -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="card">
+                        <div class="section-title">🎲 Position Sizing (Kelly)</div>
+                        <div class="kelly-calculator">
+                            <div class="kelly-row">
+                                <span class="kelly-label">Win Probability</span>
+                                <span class="kelly-value" id="kellyWinProb">--</span>
+                            </div>
+                            <div class="kelly-row">
+                                <span class="kelly-label">Avg Win / Loss</span>
+                                <span class="kelly-value" id="kellyRatio">--</span>
+                            </div>
+                            <div class="kelly-row" style="background: rgba(16, 185, 129, 0.1); padding: 8px; border-radius: 8px; margin-top: 8px;">
+                                <span class="kelly-label">Kelly %</span>
+                                <span class="kelly-value" id="kellyPercent">--</span>
+                            </div>
+                            <div class="kelly-row">
+                                <span class="kelly-label">Recommended Bet</span>
+                                <span class="kelly-value" id="recommendedBet">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">📋 Recommended Trade</div>
+                        <div style="text-align: center; padding: 15px;">
+                            <div style="font-size: 24px; font-weight: 800; margin-bottom: 10px;" id="tradeDirection">--</div>
+                            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">Based on model prediction</div>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="yesBtn">🟢 YES</button>
+                                <button class="btn btn-danger" id="noBtn">🔴 NO</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">💰 Trading Stats</div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Win Rate</div>
+                                <div class="stat-value stat-positive" id="winRate">--</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Avg P&L</div>
+                                <div class="stat-value stat-neutral" id="avgPnL">--</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Total Trades</div>
+                                <div class="stat-value stat-neutral" id="totalTrades">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Edge %</div>
+                                <div class="stat-value stat-positive" id="edge">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Limitless AI Predictor Starting...');
+
+        // ===== CONFIGURATION =====
+        const PYTH_BTC_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
+        const PYTH_API_URL = 'https://hermes.pyth.network/api/latest_price_feeds';
+        const UPDATE_INTERVAL = 30000; // 30 seconds
+        const MIN_DATA_FOR_TRAINING = 150;
+        const MONTE_CARLO_PATHS = 1000;
+        const FORECAST_HOURS = 1;
+        const TRADING_STRIKES = [64000, 65000, 66000]; // Example strikes
+
+        // ===== STATE VARIABLES =====
+        let history = [];
+        let predictions = [];
+        let trades = [];
+        let aiModel = null;
+        let modelTrained = false;
+        let isRunning = false;
+        let chart = null;
+        let retrainCount = 0;
+
+        // ===== JUMP-DIFFUSION GBM IMPLEMENTATION =====
+        class GBMJumpDiffusion {
+            constructor(S0, mu, sigma, lambda, jumpMean, jumpStd, dt, T) {
+                this.S0 = S0; // Initial price
+                this.mu = mu; // Drift
+                this.sigma = sigma; // Volatility
+                this.lambda = lambda; // Jump intensity (Poisson)
+                this.jumpMean = jumpMean;
+                this.jumpStd = jumpStd;
+                this.dt = dt; // Time step
+                this.T = T; // Total time
+                this.steps = Math.floor(T / dt);
+            }
+
+            generatePath() {
+                let S = this.S0;
+                const path = [S];
+
+                for (let i = 0; i < this.steps; i++) {
+                    // Brownian motion component
+                    const Z = this.normalRandom();
+                    const dS_brownian = this.mu * S * this.dt + this.sigma * S * Math.sqrt(this.dt) * Z;
+
+                    // Poisson jump component
+                    const N = this.poissonRandom(this.lambda * this.dt);
+                    let dS_jump = 0;
+                    for (let j = 0; j < N; j++) {
+                        const jumpSize = Math.exp(this.normalRandom() * this.jumpStd + this.jumpMean) - 1;
+                        dS_jump += S * jumpSize;
+                    }
+
+                    S = S + dS_brownian + dS_jump;
+                    path.push(Math.max(S, S * 0.001)); // Prevent negative prices
+                }
+
+                return path;
+            }
+
+            normalRandom() {
+                let u = 0, v = 0;
+                while(u === 0) u = Math.random(); // Converting [0,1) to (0,1)
+                while(v === 0) v = Math.random();
+                return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            }
+
+            poissonRandom(lambda) {
+                let L = Math.exp(-lambda);
+                let p = 1;
+                let k = 0;
+                do {
+                    k++;
+                    p *= Math.random();
+                } while (p > L);
+                return k - 1;
+            }
+
+            runSimulation(numPaths) {
+                const paths = [];
+                for (let i = 0; i < numPaths; i++) {
+                    paths.push(this.generatePath());
+                }
+                return paths;
+            }
+
+            calculateDistribution(paths) {
+                const finalPrices = paths.map(p => p[p.length - 1]);
+                finalPrices.sort((a, b) => a - b);
+
+                const mean = finalPrices.reduce((a, b) => a + b) / finalPrices.length;
+                const median = finalPrices[Math.floor(finalPrices.length / 2)];
+                const p5 = finalPrices[Math.floor(finalPrices.length * 0.05)];
+                const p95 = finalPrices[Math.floor(finalPrices.length * 0.95)];
+
+                return { mean, median, p5, p95, finalPrices };
+            }
+        }
+
+        // ===== LSTM MODEL SETUP =====
+        async function buildLSTMModel(sequenceLength) {
+            const model = tf.sequential({
+                layers: [
+                    tf.layers.lstm({
+                        units: 64,
+                        returnSequences: true,
+                        inputShape: [sequenceLength, 1],
+                        activation: 'tanh'
+                    }),
+                    tf.layers.dropout({ rate: 0.2 }),
+                    tf.layers.lstm({
+                        units: 32,
+                        returnSequences: false,
+                        activation: 'tanh'
+                    }),
+                    tf.layers.dropout({ rate: 0.2 }),
+                    tf.layers.dense({ units: 16, activation: 'relu' }),
+                    tf.layers.dense({ units: 1, activation: 'linear' })
+                ]
+            });
+
+            model.compile({
+                optimizer: tf.train.adam(0.001),
+                loss: 'meanSquaredError',
+                metrics: ['mae']
+            });
+
+            return model;
+        }
+
+        // ===== FETCH BTC PRICE =====
+        async function fetchBTCPrice() {
+            try {
+                const response = await fetch(`${PYTH_API_URL}?ids[]=${PYTH_BTC_ID}`);
+                const data = await response.json();
+                if (data && data[0] && data[0].price) {
+                    const p = data[0].price;
+                    return parseFloat(p.price) * Math.pow(10, p.expo);
+                }
+            } catch (error) {
+                console.error('❌ Fetch error:', error);
+            }
+            return null;
+        }
+
+        // ===== TRAIN AI MODEL =====
+        async function trainAIModel() {
+            if (history.length < MIN_DATA_FOR_TRAINING) {
+                alert(`Need ${MIN_DATA_FOR_TRAINING} data points`);
+                return;
+            }
+
+            document.getElementById('modelStatus').textContent = 'Training...';
+
+            const sequenceLength = 30;
+            const X = [], y = [];
+
+            // Normalize data
+            const mean = history.reduce((a, b) => a + b) / history.length;
+            const std = Math.sqrt(history.reduce((a, b) => a + Math.pow(b - mean, 2)) / history.length);
+            const normalized = history.map(p => (p - mean) / std);
+
+            // Create sequences
+            for (let i = 0; i <= normalized.length - sequenceLength - 1; i++) {
+                const seq = normalized.slice(i, i + sequenceLength).map(p => [p]);
+                X.push(seq);
+                y.push([normalized[i + sequenceLength]]);
+            }
+
+            if (!aiModel) {
+                aiModel = await buildLSTMModel(sequenceLength);
+            }
+
+            const xTensor = tf.tensor3d(X);
+            const yTensor = tf.tensor2d(y);
+
+            await aiModel.fit(xTensor, yTensor, {
+                epochs: 50,
+                batchSize: 16,
+                verbose: 0,
+                shuffle: true
+            });
+
+            xTensor.dispose();
+            yTensor.dispose();
+
+            modelTrained = true;
+            retrainCount++;
+            document.getElementById('modelStatus').textContent = '✅ Model Ready';
+            document.getElementById('retrainCount').textContent = retrainCount;
+            console.log('✅ Model trained');
+        }
+
+        // ===== MAKE PREDICTION =====
+        async function makeHourlyPrediction() {
+            if (!modelTrained || history.length < 30) return null;
+
+            const currentPrice = history[history.length - 1];
+            
+            // Calculate volatility
+            const recentPrices = history.slice(-30);
+            const returns = [];
+            for (let i = 1; i < recentPrices.length; i++) {
+                returns.push(Math.log(recentPrices[i] / recentPrices[i - 1]));
+            }
+            const volatility = Math.sqrt(returns.reduce((a, b) => a + Math.pow(b, 2)) / returns.length);
+            const drift = returns.reduce((a, b) => a + b) / returns.length;
+
+            // Run GBM Jump-Diffusion simulation
+            const gbm = new GBMJumpDiffusion(
+                currentPrice,
+                drift,
+                volatility,
+                0.5, // Jump intensity
+                -0.02, // Jump mean
+                0.05, // Jump std
+                1/252, // Daily time step
+                FORECAST_HOURS / 24 // Time horizon
+            );
+
+            const paths = gbm.runSimulation(MONTE_CARLO_PATHS);
+            const distribution = gbm.calculateDistribution(paths);
+
+            // Get LSTM sentiment
+            const mean = history.reduce((a, b) => a + b) / history.length;
+            const std = Math.sqrt(history.reduce((a, b) => a + Math.pow(b - mean, 2)) / history.length);
+            const normalized = history.slice(-30).map(p => (p - mean) / std);
+
+            const inputTensor = tf.tensor3d([normalized.map(p => [p])]);
+            const lstmPred = await aiModel.predict(inputTensor).data();
+            inputTensor.dispose();
+
+            const lstmPrice = lstmPred[0] * std + mean;
+
+            // Combine predictions
+            const combinedPrice = (distribution.mean * 0.5 + lstmPrice * 0.5);
+            const upProbability = (distribution.finalPrices.filter(p => p > currentPrice).length / MONTE_CARLO_PATHS) * 100;
+
+            return {
+                currentPrice,
+                forecastPrice: combinedPrice,
+                distribution,
+                upProbability,
+                downProbability: 100 - upProbability,
+                volatility: volatility * 100,
+                confidence: Math.min(90, 50 + Math.abs(upProbability - 50))
+            };
+        }
+
+        // ===== UPDATE UI =====
+        function updateUI(prediction) {
+            if (!prediction) return;
+
+            document.getElementById('currentPrice').textContent = `$${prediction.currentPrice.toFixed(2)}`;
+            document.getElementById('forecastPrice').textContent = `$${prediction.forecastPrice.toFixed(2)}`;
+            
+            const movePercent = ((prediction.forecastPrice - prediction.currentPrice) / prediction.currentPrice * 100);
+            document.getElementById('priceMove').textContent = `${movePercent > 0 ? '📈' : '📉'} ${movePercent.toFixed(2)}%`;
+            
+            document.getElementById('confidenceScore').textContent = `${prediction.confidence.toFixed(0)}%`;
+            document.getElementById('confidenceFill').style.width = prediction.confidence + '%';
+            
+            document.getElementById('probUp').textContent = `${prediction.upProbability.toFixed(1)}%`;
+            document.getElementById('probDown').textContent = `${prediction.downProbability.toFixed(1)}%`;
+
+            // Update chart
+            updateChart(prediction);
+
+            // Kelly calculator
+            updateKellyCalculator(prediction);
+
+            // Trade recommendation
+            const recommendation = prediction.upProbability > 55 ? '🟢 BUY YES' : '🔴 BUY NO';
+            document.getElementById('tradeDirection').textContent = recommendation;
+
+            document.getElementById('dataPoints').textContent = history.length;
+            document.getElementById('predictionCount').textContent = predictions.length;
+        }
+
+        function updateKellyCalculator(prediction) {
+            const winProb = prediction.upProbability / 100;
+            const ratio = 1; // Assuming 1:1 payout
+
+            const kelly = (winProb * ratio - (1 - winProb)) / ratio;
+            const kellyPercent = Math.max(0, kelly * 100);
+
+            document.getElementById('kellyWinProb').textContent = `${(winProb * 100).toFixed(1)}%`;
+            document.getElementById('kellyRatio').textContent = `${ratio.toFixed(2)}:1`;
+            document.getElementById('kellyPercent').textContent = `${kellyPercent.toFixed(1)}%`;
+            document.getElementById('recommendedBet').textContent = `${(kellyPercent * 0.25).toFixed(1)}%`; // Fractional Kelly
+        }
+
+        // ===== CHART SETUP =====
+        function initChart() {
+            const ctx = document.getElementById('projectionChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Current Price',
+                        data: [],
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }, {
+                        label: 'Forecast Mean',
+                        data: [],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8', font: { size: 12, weight: 700 } }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b' } },
+                        y: { ticks: { color: '#64748b' } }
+                    }
+                }
+            });
+        }
+
+        function updateChart(prediction) {
+            if (!chart) return;
+
+            const time = new Date().toLocaleTimeString();
+            chart.data.labels.push(time);
+            chart.data.datasets[0].data.push(prediction.currentPrice);
+            chart.data.datasets[1].data.push(prediction.forecastPrice);
+
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+            }
+
+            chart.update('none');
+        }
+
+        // ===== MAIN UPDATE LOOP =====
+        async function update() {
+            const price = await fetchBTCPrice();
+            if (!price) return;
+
+            history.push(price);
+            if (history.length > 1000) history.shift();
+
+            document.getElementById('dataPoints').textContent = history.length;
+
+            if (history.length >= MIN_DATA_FOR_TRAINING && !modelTrained && isRunning) {
+                await trainAIModel();
+            }
+
+            if (modelTrained && isRunning) {
+                const prediction = await makeHourlyPrediction();
+                if (prediction) {
+                    predictions.push(prediction);
+                    updateUI(prediction);
+                }
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        }
+
+        // ===== EVENT LISTENERS =====
+        document.getElementById('startBtn').addEventListener('click', () => {
+            isRunning = true;
+            document.getElementById('startBtn').textContent = '⏹ Stop';
+            console.log('✅ Started');
+        });
+
+        document.getElementById('trainBtn').addEventListener('click', () => trainAIModel());
+
+        // ===== INIT =====
+        initChart();
+        update();
+        setInterval(update, UPDATE_INTERVAL);
+    </script>
+</body>
+</html>
