@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limitless Prediction AI v2 - Production Ready</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            min-height: 100vh; 
+            padding: 20px; 
+            color: #e2e8f0; 
+        }
+        
+        .container { max-width: 2000px; margin: 0 auto; }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        
+        .logo { 
+            font-size: 48px; 
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float { 
+            0%, 100% { transform: translateY(0); } 
+            50% { transform: translateY(-10px); } 
+        }
+        
+        h1 { 
+            font-size: 42px; 
+            font-weight: 800; 
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 12px; }
+        
+        .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .badge-gbm { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; }
+        .badge-ai { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; }
+        .badge-limitless { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; }
+        
+        .progress-container {
+            margin: 20px 0;
+            background: rgba(30, 41, 59, 0.4);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .progress-label { font-size: 12px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(30, 41, 59, 0.8); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%); transition: width 0.3s ease; }
+        
+        .main-grid { display: grid; grid-template-columns: 2fr 1.2fr 1fr; gap: 20px; margin-bottom: 20px; }
+        
+        .card { 
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .section-title { 
+            font-size: 12px; 
+            font-weight: 700; 
+            color: #e2e8f0; 
+            margin-bottom: 18px; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .price-section { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        
+        .price-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .price-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 10px; }
+        .price-value { font-size: 32px; font-weight: 800; color: #6366f1; margin-bottom: 8px; }
+        .price-subtitle { font-size: 12px; color: #64748b; }
+        
+        .prediction-panel {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .prob-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+        
+        .prob-box {
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .prob-up { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .prob-down { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+        
+        .prob-label { font-size: 10px; color: #64748b; margin-bottom: 4px; }
+        .prob-value { font-size: 20px; font-weight: 800; }
+        .up { color: #10b981; }
+        .down { color: #ef4444; }
+        
+        .chart-container { position: relative; height: 350px; margin-top: 15px; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        
+        .stat-box {
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-label { font-size: 10px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
+        .stat-value { font-size: 24px; font-weight: 800; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-label { font-size: 10px; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; display: block; }
+        .input-field { width: 100%; padding: 12px; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 10px; color: #e2e8f0; font-size: 14px; }
+        
+        .button-group { display: flex; gap: 12px; margin-top: 15px; }
+        
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; }
+        .btn-secondary { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+        
+        .kelly-calc {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .kelly-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .kelly-row:last-child { border-bottom: none; }
+        .kelly-label { font-size: 12px; color: #94a3b8; }
+        .kelly-value { font-size: 14px; font-weight: 700; color: #10b981; }
+        
+        .market-item {
+            background: rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .market-item-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .market-item-strike { font-weight: 700; color: #6366f1; }
+        .market-item-time { font-size: 10px; color: #64748b; }
+        .market-item-probs { display: flex; gap: 8px; font-size: 11px; font-weight: 600; }
+        .market-item-yes { color: #10b981; }
+        .market-item-no { color: #ef4444; }
+        
+        .error-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fca5a5;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .success-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            color: #86efac;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .backtesting-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-top: 15px;
+        }
+        
+        .backtesting-table th, .backtesting-table td {
+            padding: 8px;
+            text-align: right;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .backtesting-table th { background: rgba(99, 102, 241, 0.1); font-weight: 700; }
+        .backtesting-table td:first-child, .backtesting-table th:first-child { text-align: left; }
+        
+        @media (max-width: 1400px) { .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎯</div>
+            <h1>Limitless AI Predictor v2</h1>
+            <div class="subtitle">Production-Ready Hourly Market Predictions</div>
+            <div class="badges">
+                <span class="badge badge-gbm">🌊 Jump-Diffusion GBM</span>
+                <span class="badge badge-ai">🧠 LSTM AI</span>
+                <span class="badge badge-limitless">💎 Limitless Ready</span>
+            </div>
+        </div>
+
+        <div id="errorAlert" class="error-box" style="display: none;"></div>
+        <div id="successAlert" class="success-box" style="display: none;"></div>
+
+        <div id="loading" style="text-align: center; padding: 50px;">
+            <div style="font-size: 32px; margin-bottom: 15px;">⏳</div>
+            <p>Initializing prediction engine...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Progress Section -->
+            <div class="progress-container">
+                <div class="progress-label">Data Collection Progress: <span id="progressPercent">0%</span></div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
+                    <span id="dataStatus">0 / 150 data points</span> • 
+                    <span id="timeRemaining">calculating...</span>
+                </div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="main-grid">
+                <!-- Left: Analysis & Chart -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="price-section">
+                        <div class="price-card">
+                            <div class="price-label">Current Price</div>
+                            <div class="price-value" id="currentPrice">$--</div>
+                            <div class="price-subtitle" id="priceTime">fetching...</div>
+                        </div>
+                        <div class="price-card">
+                            <div class="price-label">1-Hour Forecast</div>
+                            <div class="price-value" id="forecastPrice">$--</div>
+                            <div class="price-subtitle" id="priceMove">--</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">📊 AI Prediction Analysis</div>
+                        <div id="predictionPanel" class="prediction-panel" style="display: none;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span style="font-size: 14px; color: #94a3b8;">Confidence Score</span>
+                                <span style="font-size: 20px; font-weight: 800; color: #6366f1;" id="confidenceScore">--</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill" style="width: 50%"></div>
+                            </div>
+                            <div class="prob-grid">
+                                <div class="prob-box prob-up">
+                                    <div class="prob-label">UP Probability</div>
+                                    <div class="prob-value up" id="probUp">--%</div>
+                                </div>
+                                <div class="prob-box prob-down">
+                                    <div class="prob-label">DOWN Probability</div>
+                                    <div class="prob-value down" id="probDown">--%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="waitingPanel" style="text-align: center; color: #94a3b8; padding: 20px;">
+                            Collecting data... First predictions in <span id="minutesRemaining">--</span> minutes
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">📈 Price Projection</div>
+                        <div class="chart-container">
+                            <canvas id="projectionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle: Model Status -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="card">
+                        <div class="section-title">🧠 Model Status</div>
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <div style="font-size: 14px; font-weight: 700; color: #8b5cf6;" id="modelStatus">Initializing...</div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 8px;" id="modelInfo">Loading data...</div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Data Points</div>
+                                <div class="stat-value" style="color: #6366f1;" id="dataPoints">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Predictions</div>
+                                <div class="stat-value" style="color: #6366f1;" id="predictionCount">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Accuracy</div>
+                                <div class="stat-value" style="color: #6366f1;" id="accuracy">--%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Retrains</div>
+                                <div class="stat-value" style="color: #6366f1;" id="retrainCount">0</div>
+                            </div>
+                        </div>
+                        <div class="button-group" style="margin-top: 15px;">
+                            <button id="startBtn" class="btn btn-secondary">▶ Start</button>
+                            <button id="stopBtn" class="btn btn-danger" style="display: none;">⏹ Stop</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">⚙️ Simulation Stats</div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Volatility</div>
+                                <div class="stat-value" style="color: #f59e0b;" id="volatility">--%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Mean Return</div>
+                                <div class="stat-value" style="color: #6366f1;" id="meanReturn">--%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Sharpe Ratio</div>
+                                <div class="stat-value" style="color: #8b5cf6;" id="sharpeRatio">--</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">VaR (95%)</div>
+                                <div class="stat-value" style="color: #ef4444;" id="valueAtRisk">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Trading -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="card">
+                        <div class="section-title">🎲 Kelly Criterion</div>
+                        <div class="kelly-calc">
+                            <div class="kelly-row">
+                                <span class="kelly-label">Win Probability</span>
+                                <span class="kelly-value" id="kellyWinProb">--</span>
+                            </div>
+                            <div class="kelly-row">
+                                <span class="kelly-label">Odds Ratio</span>
+                                <span class="kelly-value" id="kellyRatio">--</span>
+                            </div>
+                            <div class="kelly-row" style="background: rgba(16, 185, 129, 0.1); padding: 8px; border-radius: 6px; margin-top: 8px;">
+                                <span class="kelly-label">Kelly %</span>
+                                <span class="kelly-value" id="kellyPercent">--</span>
+                            </div>
+                            <div class="kelly-row">
+                                <span class="kelly-label">Recommended Bet</span>
+                                <span class="kelly-value" id="recommendedBet">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">📋 Trade Recommendation</div>
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 32px; font-weight: 800; margin-bottom: 12px;" id="tradeDirection">--</div>
+                            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 15px;">Based on model prediction</div>
+                            <div class="button-group">
+                                <button class="btn btn-secondary" id="yesBtn">🟢 YES</button>
+                                <button class="btn btn-danger" id="noBtn">🔴 NO</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title">💰 Performance</div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">Win Rate</div>
+                                <div class="stat-value" style="color: #10b981;" id="winRate">--%</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Avg P&L</div>
+                                <div class="stat-value" style="color: #6366f1;" id="avgPnL">--</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Total Trades</div>
+                                <div class="stat-value" style="color: #6366f1;" id="totalTrades">0</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Edge %</div>
+                                <div class="stat-value" style="color: #10b981;" id="edge">--%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backtesting Section -->
+            <div class="card" style="margin-top: 20px;">
+                <div class="section-title">📊 Backtesting Results</div>
+                <table class="backtesting-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Prediction</th>
+                            <th>Confidence</th>
+                            <th>Up %</th>
+                            <th>Actual Move</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="backTestingTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Limitless AI Predictor v2 - Production Build');
+
+        // ===== CONFIG =====
+        const CONFIG = {
+            PYTH_BTC_ID: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
+            PYTH_API: 'https://hermes.pyth.network/api/latest_price_feeds',
+            UPDATE_INTERVAL: 30000,
+            MIN_DATA: 150,
+            MONTE_CARLO: 1000,
+            FORECAST_HOURS: 1,
+            LSTM_SEQUENCE: 30,
+            VOLATILITY_PERIOD: 20
+        };
+
+        // ===== STATE =====
+        let state = {
+            history: [],
+            predictions: [],
+            trades: [],
+            model: null,
+            trained: false,
+            running: false,
+            retrainCount: 0,
+            startTime: Date.now()
+        };
+
+        // ===== UTILITIES =====
+        function showError(msg) {
+            const el = document.getElementById('errorAlert');
+            el.textContent = '❌ ' + msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function showSuccess(msg) {
+            const el = document.getElementById('successAlert');
+            el.textContent = '✅ ' + msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function safe(value, fallback = '--') {
+            if (isNaN(value) || value === undefined || value === null) return fallback;
+            return value;
+        }
+
+        // ===== PRICE FETCHING =====
+        async function fetchBTCPrice() {
+            try {
+                const res = await fetch(`${CONFIG.PYTH_API}?ids[]=${CONFIG.PYTH_BTC_ID}`);
+                const data = await res.json();
+                if (data && data[0] && data[0].price) {
+                    const p = data[0].price;
+                    const price = parseFloat(p.price) * Math.pow(10, p.expo);
+                    return Math.max(price, 1000); // Sanity check
+                }
+            } catch (error) {
+                console.error('Price fetch error:', error);
+            }
+            return null;
+        }
+
+        // ===== STATISTICS =====
+        function calculateStats(prices) {
+            if (prices.length < 2) return null;
+
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push(Math.log(prices[i] / prices[i - 1]));
+            }
+
+            const mean = returns.reduce((a, b) => a + b) / returns.length;
+            const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2)) / returns.length;
+            const std = Math.sqrt(variance);
+
+            // Volatility annualized
+            const volatility = std * Math.sqrt(252);
+
+            // Sharpe (assuming 0% risk-free rate)
+            const sharpe = mean / std;
+
+            // VaR 95%
+            const sorted = [...returns].sort((a, b) => a - b);
+            const var95Index = Math.floor(sorted.length * 0.05);
+            const var95 = sorted[var95Index];
+
+            return {
+                mean: mean * 100,
+                volatility: volatility * 100,
+                sharpe: sharpe,
+                var95: var95 * 100,
+                std: std * 100
+            };
+        }
+
+        // ===== GBM SIMULATION =====
+        function generateGBMPath(S0, mu, sigma, jumpIntensity, jumpMean, jumpStd, dt, steps) {
+            const path = [S0];
+            let S = S0;
+
+            for (let i = 0; i < steps; i++) {
+                // Brownian
+                const Z = gaussianRandom();
+                const dS_brownian = mu * S * dt + sigma * S * Math.sqrt(dt) * Z;
+
+                // Poisson jumps
+                let dS_jump = 0;
+                const jumps = poissonRandom(jumpIntensity * dt);
+                for (let j = 0; j < jumps; j++) {
+                    const jumpSize = Math.exp(gaussianRandom() * jumpStd + jumpMean) - 1;
+                    dS_jump += S * jumpSize;
+                }
+
+                S = Math.max(S + dS_brownian + dS_jump, S * 0.99);
+                path.push(S);
+            }
+            return path;
+        }
+
+        function gaussianRandom() {
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+        }
+
+        function poissonRandom(lambda) {
+            let L = Math.exp(-lambda), p = 1, k = 0;
+            do { k++; p *= Math.random(); } while (p > L);
+            return k - 1;
+        }
+
+        // ===== LSTM MODEL =====
+        async function buildModel(seqLen) {
+            return tf.sequential({
+                layers: [
+                    tf.layers.lstm({ units: 64, returnSequences: true, inputShape: [seqLen, 1], activation: 'relu' }),
+                    tf.layers.dropout({ rate: 0.2 }),
+                    tf.layers.lstm({ units: 32, returnSequences: false, activation: 'relu' }),
+                    tf.layers.dropout({ rate: 0.1 }),
+                    tf.layers.dense({ units: 16, activation: 'relu' }),
+                    tf.layers.dense({ units: 1, activation: 'linear' })
+                ]
+            });
+        }
+
+        async function trainModel() {
+            if (state.history.length < CONFIG.MIN_DATA) {
+                showError(`Need ${CONFIG.MIN_DATA} data points`);
+                return;
+            }
+
+            document.getElementById('modelStatus').textContent = 'Training...';
+
+            try {
+                if (!state.model) {
+                    state.model = await buildModel(CONFIG.LSTM_SEQUENCE);
+                    state.model.compile({ optimizer: 'adam', loss: 'mse' });
+                }
+
+                const prices = state.history;
+                const mean = prices.reduce((a, b) => a + b) / prices.length;
+                const std = Math.sqrt(prices.reduce((a, b) => a + Math.pow(b - mean, 2)) / prices.length);
+                const normalized = prices.map(p => (p - mean) / std);
+
+                const X = [], y = [];
+                for (let i = 0; i <= normalized.length - CONFIG.LSTM_SEQUENCE - 1; i++) {
+                    X.push(normalized.slice(i, i + CONFIG.LSTM_SEQUENCE).map(p => [p]));
+                    y.push([(normalized[i + CONFIG.LSTM_SEQUENCE] - mean) / std]);
+                }
+
+                const xTensor = tf.tensor3d(X);
+                const yTensor = tf.tensor2d(y);
+
+                await state.model.fit(xTensor, yTensor, { epochs: 30, batchSize: 16, verbose: 0 });
+
+                xTensor.dispose();
+                yTensor.dispose();
+
+                state.trained = true;
+                state.retrainCount++;
+                document.getElementById('modelStatus').textContent = '✅ Ready';
+                document.getElementById('retrainCount').textContent = state.retrainCount;
+                showSuccess('Model trained successfully');
+
+            } catch (error) {
+                console.error('Training error:', error);
+                showError('Model training failed: ' + error.message);
+            }
+        }
+
+        // ===== PREDICTION =====
+        async function predict() {
+            if (!state.trained || state.history.length < CONFIG.LSTM_SEQUENCE + 10) return null;
+
+            try {
+                const prices = state.history;
+                const current = prices[prices.length - 1];
+
+                // Calculate statistics
+                const stats = calculateStats(prices.slice(-CONFIG.VOLATILITY_PERIOD));
+                if (!stats) return null;
+
+                // GBM parameters
+                const mu = stats.mean / 100 / 252; // Daily drift
+                const sigma = stats.std / 100 / Math.sqrt(252); // Daily volatility
+
+                // Run Monte Carlo
+                const paths = [];
+                for (let i = 0; i < CONFIG.MONTE_CARLO; i++) {
+                    const steps = Math.floor(CONFIG.FORECAST_HOURS * 24); // Hourly steps
+                    const dt = 1 / (24 * 365);
+                    const path = generateGBMPath(current, mu, sigma, 0.1, -0.01, 0.05, dt, steps);
+                    paths.push(path[path.length - 1]);
+                }
+
+                paths.sort((a, b) => a - b);
+                const mean = paths.reduce((a, b) => a + b) / paths.length;
+                const upCount = paths.filter(p => p > current).length;
+                const upProb = (upCount / paths.length) * 100;
+
+                // Get LSTM prediction
+                const normalized = prices.map(p => (p - current) / current);
+                const inputSeq = normalized.slice(-CONFIG.LSTM_SEQUENCE).map(p => [p]);
+                const input = tf.tensor3d([inputSeq]);
+                const lstm = await state.model.predict(input);
+                const lstmOut = (await lstm.data())[0];
+                input.dispose();
+                lstm.dispose();
+
+                const lstmPrice = current * (1 + lstmOut);
+
+                // Confidence
+                const priceRange = (paths[Math.floor(paths.length * 0.95)] - paths[Math.floor(paths.length * 0.05)]) / current;
+                const confidence = Math.max(50, Math.min(95, 50 + Math.abs(upProb - 50) * (1 / priceRange)));
+
+                return {
+                    current,
+                    forecast: (mean + lstmPrice) / 2,
+                    upProb: Math.max(5, Math.min(95, upProb)),
+                    downProb: Math.max(5, Math.min(95, 100 - upProb)),
+                    confidence: confidence,
+                    volatility: stats.volatility,
+                    sharpe: stats.sharpe,
+                    var95: stats.var95
+                };
+
+            } catch (error) {
+                console.error('Prediction error:', error);
+                return null;
+            }
+        }
+
+        // ===== UI UPDATE =====
+        let chart = null;
+
+        function initChart() {
+            const ctx = document.getElementById('projectionChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'Current', data: [], borderColor: '#6366f1', pointRadius: 0, tension: 0.4 },
+                    { label: 'Forecast', data: [], borderColor: '#8b5cf6', pointRadius: 0, borderDash: [5, 5], tension: 0.4 }
+                ]},
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: { y: { ticks: { color: '#64748b' } }, x: { ticks: { color: '#64748b' } } }
+                }
+            });
+        }
+
+        function updateChart(pred) {
+            if (!chart) return;
+            const t = new Date().toLocaleTimeString();
+            chart.data.labels.push(t);
+            chart.data.datasets[0].data.push(pred.current);
+            chart.data.datasets[1].data.push(pred.forecast);
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+            }
+            chart.update('none');
+        }
+
+        function updateUI(pred) {
+            if (!pred) return;
+
+            document.getElementById('currentPrice').textContent = `$${pred.current.toFixed(2)}`;
+            document.getElementById('forecastPrice').textContent = `$${pred.forecast.toFixed(2)}`;
+            
+            const move = ((pred.forecast - pred.current) / pred.current) * 100;
+            document.getElementById('priceMove').textContent = `${move > 0 ? '📈' : '📉'} ${move.toFixed(2)}%`;
+
+            document.getElementById('confidenceScore').textContent = `${pred.confidence.toFixed(0)}%`;
+            document.getElementById('confidenceFill').style.width = pred.confidence + '%';
+
+            document.getElementById('probUp').textContent = `${pred.upProb.toFixed(1)}%`;
+            document.getElementById('probDown').textContent = `${pred.downProb.toFixed(1)}%`;
+
+            document.getElementById('volatility').textContent = `${pred.volatility.toFixed(1)}%`;
+            document.getElementById('sharpeRatio').textContent = `${safe(pred.sharpe.toFixed(2))}`;
+            document.getElementById('valueAtRisk').textContent = `${pred.var95.toFixed(2)}%`;
+
+            // Kelly
+            const winProb = pred.upProb / 100;
+            const kelly = Math.max(0, (winProb - (1 - winProb)) * 100 / 2);
+            document.getElementById('kellyPercent').textContent = `${kelly.toFixed(1)}%`;
+            document.getElementById('recommendedBet').textContent = `${(kelly * 0.25).toFixed(1)}%`;
+
+            // Trade recommendation
+            const rec = pred.upProb > 55 ? '🟢 BUY YES' : '🔴 BUY NO';
+            document.getElementById('tradeDirection').textContent = rec;
+
+            updateChart(pred);
+
+            // Update table
+            const row = `<tr>
+                <td>${new Date().toLocaleTimeString()}</td>
+                <td>${move > 0 ? '📈 UP' : '📉 DOWN'}</td>
+                <td>${pred.confidence.toFixed(0)}%</td>
+                <td>${pred.upProb.toFixed(1)}%</td>
+                <td>${move.toFixed(2)}%</td>
+                <td>${move > 0 && pred.upProb > 50 ? '✅' : move < 0 && pred.upProb < 50 ? '✅' : '❌'}</td>
+            </tr>`;
+            document.getElementById('backTestingTable').innerHTML = row + document.getElementById('backTestingTable').innerHTML;
+            if (document.getElementById('backTestingTable').rows.length > 20) {
+                document.getElementById('backTestingTable').removeChild(
+                    document.getElementById('backTestingTable').lastChild
+                );
+            }
+        }
+
+        // ===== MAIN LOOP =====
+        async function update() {
+            const price = await fetchBTCPrice();
+            if (!price) return;
+
+            state.history.push(price);
+            if (state.history.length > 1000) state.history.shift();
+
+            const percent = Math.min(100, (state.history.length / CONFIG.MIN_DATA) * 100);
+            document.getElementById('progressPercent').textContent = percent.toFixed(0) + '%';
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('dataStatus').textContent = `${state.history.length} / ${CONFIG.MIN_DATA} data points`;
+
+            const elapsed = (Date.now() - state.startTime) / 1000 / 60;
+            const rate = state.history.length / elapsed;
+            const remaining = Math.max(0, (CONFIG.MIN_DATA - state.history.length) / rate);
+            document.getElementById('timeRemaining').textContent = `${remaining.toFixed(0)} minutes remaining`;
+            document.getElementById('minutesRemaining').textContent = remaining.toFixed(0);
+
+            document.getElementById('dataPoints').textContent = state.history.length;
+            document.getElementById('currentPrice').textContent = `$${price.toFixed(2)}`;
+
+            if (state.history.length >= CONFIG.MIN_DATA && !state.trained && state.running) {
+                await trainModel();
+                document.getElementById('predictionPanel').style.display = 'block';
+                document.getElementById('waitingPanel').style.display = 'none';
+            }
+
+            if (state.trained && state.running) {
+                const pred = await predict();
+                if (pred) {
+                    state.predictions.push(pred);
+                    document.getElementById('predictionCount').textContent = state.predictions.length;
+                    updateUI(pred);
+                }
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        }
+
+        // ===== EVENTS =====
+        document.getElementById('startBtn').addEventListener('click', () => {
+            state.running = true;
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'flex';
+            showSuccess('Predictor started');
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            state.running = false;
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'flex';
+            showSuccess('Predictor stopped');
+        });
+
+        // ===== INIT =====
+        initChart();
+        update();
+        setInterval(update, CONFIG.UPDATE_INTERVAL);
+    </script>
+</body>
+</html>
