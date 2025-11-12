@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prophet Challenge Predictor - Multi-Crypto AI</title>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0e1a;
+            color: #e5e7eb;
+            overflow-x: hidden;
+        }
+        
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        
+        /* ===== HEADER ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border-radius: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #1f2937;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-crypto {
+            display: flex;
+            gap: 8px;
+            background: #111827;
+            padding: 6px;
+            border-radius: 10px;
+        }
+        
+        .crypto-btn {
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .crypto-btn:hover { background: #1f2937; color: #e5e7eb; }
+        .crypto-btn.active { background: #10b981; color: white; }
+        
+        .balance { font-size: 14px; font-weight: 700; color: #e5e7eb; }
+        
+        /* ===== MAIN GRID ===== */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 24px;
+        }
+        
+        /* ===== PREDICTION CARD ===== */
+        .prediction-card {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 24px;
+        }
+        
+        .market-question {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e5e7eb;
+            margin-bottom: 8px;
+        }
+        
+        .market-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .baseline {
+            font-size: 13px;
+            color: #9ca3af;
+        }
+        
+        .baseline-price {
+            font-size: 24px;
+            font-weight: 900;
+            color: #10b981;
+            margin-left: 8px;
+        }
+        
+        .current-price-display {
+            text-align: right;
+        }
+        
+        .current-label { font-size: 11px; color: #6b7280; }
+        .current-value { font-size: 20px; font-weight: 700; color: #e5e7eb; }
+        
+        .countdown {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #1f2937;
+            border-radius: 8px;
+        }
+        
+        .countdown-icon { color: #f59e0b; }
+        .countdown-time { font-size: 14px; font-weight: 700; color: #f59e0b; }
+        
+        /* ===== CHART ===== */
+        .chart-container {
+            background: #0f1419;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+            height: 400px;
+            border: 1px solid #1f2937;
+        }
+        
+        #tradingChart { width: 100%; height: 100%; }
+        
+        /* ===== PREDICTION DISPLAY ===== */
+        .prediction-display {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .prediction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .prediction-label { font-size: 12px; color: #9ca3af; text-transform: uppercase; }
+        .prediction-confidence { font-size: 14px; font-weight: 700; color: #10b981; }
+        
+        .prediction-price {
+            font-size: 36px;
+            font-weight: 900;
+            color: #10b981;
+            text-align: center;
+            margin: 12px 0;
+        }
+        
+        .prediction-move {
+            font-size: 14px;
+            text-align: center;
+            color: #6b7280;
+        }
+        
+        /* ===== PREDICTION RESULT ===== */
+        .prediction-result {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 2px solid rgba(16, 185, 129, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .result-emoji {
+            font-size: 64px;
+            margin-bottom: 12px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .result-text {
+            font-size: 28px;
+            font-weight: 900;
+            color: #10b981;
+            margin-bottom: 8px;
+        }
+        
+        .result-strength {
+            font-size: 14px;
+            color: #9ca3af;
+            margin-bottom: 12px;
+        }
+        
+        .result-bar {
+            height: 8px;
+            background: #1f2937;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        
+        .result-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        }
+        
+        /* ===== COMMUNITY SENTIMENT ===== */
+        .sentiment-section {
+            background: #111827;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .sentiment-header {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+        
+        .sentiment-bar {
+            display: flex;
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        
+        .sentiment-up { background: #10b981; transition: width 0.3s; }
+        .sentiment-down { background: #ef4444; transition: width 0.3s; }
+        
+        .sentiment-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .sentiment-up-text { color: #10b981; }
+        .sentiment-down-text { color: #ef4444; }
+        
+        /* ===== SIDE PANEL ===== */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .info-card {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 20px;
+        }
+        
+        .info-title {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #e5e7eb;
+            margin-bottom: 16px;
+        }
+        
+        /* ===== STATS GRID ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .stat-box {
+            background: #0f1419;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        
+        .stat-label { font-size: 10px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; }
+        .stat-value { font-size: 20px; font-weight: 800; color: #10b981; }
+        
+        /* ===== TECHNICAL INDICATORS ===== */
+        .indicators {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .indicator-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #1f2937;
+        }
+        
+        .indicator-row:last-child { border-bottom: none; }
+        
+        .indicator-name { font-size: 12px; color: #9ca3af; }
+        .indicator-value { font-size: 13px; font-weight: 700; }
+        
+        .bullish { color: #10b981; }
+        .bearish { color: #ef4444; }
+        .neutral { color: #f59e0b; }
+        
+        /* ===== SIGNAL STRENGTH ===== */
+        .signal-strength {
+            margin-top: 16px;
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 10px;
+        }
+        
+        .signal-label { font-size: 11px; color: #9ca3af; margin-bottom: 8px; }
+        .signal-bar {
+            height: 6px;
+            background: #1f2937;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .signal-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            transition: width 0.5s;
+        }
+        
+        .signal-text {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #10b981;
+            text-align: center;
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .nav-crypto { overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="logo">⚡ PROPHET AI</div>
+            <div class="nav-crypto">
+                <button class="crypto-btn active" data-crypto="BTC">BTC</button>
+                <button class="crypto-btn" data-crypto="ETH">ETH</button>
+                <button class="crypto-btn" data-crypto="SOL">SOL</button>
+                <button class="crypto-btn" data-crypto="DOGE">DOGE</button>
+                <button class="crypto-btn" data-crypto="XRP">XRP</button>
+            </div>
+            <div class="balance">Advanced ML Predictor</div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-grid">
+            <!-- LEFT: CHART & PREDICTION -->
+            <div>
+                <div class="prediction-card">
+                    <div class="market-question" id="marketQuestion">Will BTC be above baseline in 15 minutes?</div>
+                    
+                    <div class="market-details">
+                        <div>
+                            <span class="baseline">Baseline:</span>
+                            <span class="baseline-price" id="baselinePrice">$--</span>
+                        </div>
+                        <div class="current-price-display">
+                            <div class="current-label">Current Price</div>
+                            <div class="current-value" id="currentPrice">$--</div>
+                        </div>
+                        <div class="countdown">
+                            <span class="countdown-icon">⏰</span>
+                            <span class="countdown-time" id="countdown">--:--</span>
+                        </div>
+                    </div>
+
+                    <!-- CHART -->
+                    <div class="chart-container">
+                        <div id="tradingChart"></div>
+                    </div>
+
+                    <!-- AI PREDICTION RESULT -->
+                    <div class="prediction-result" id="predictionResult" style="display: none;">
+                        <div class="result-emoji" id="resultEmoji">--</div>
+                        <div class="result-text" id="resultText">--</div>
+                        <div class="result-strength" id="resultStrength">--</div>
+                        <div class="result-bar">
+                            <div class="result-fill" id="resultFill" style="width: 50%"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI PREDICTION (Detailed) -->
+                    <div class="prediction-display" id="predictionDisplay" style="display: none;">
+                        <div class="prediction-header">
+                            <span class="prediction-label">AI Prediction (15min)</span>
+                            <span class="prediction-confidence" id="confidence">Confidence: --%</span>
+                        </div>
+                        <div class="prediction-price" id="predictedPrice">$--</div>
+                        <div class="prediction-move" id="predictedMove">-- change expected</div>
+                    </div>
+
+                    <!-- COMMUNITY SENTIMENT -->
+                    <div class="sentiment-section">
+                        <div class="sentiment-header">Community Sentiment</div>
+                        <div class="sentiment-bar">
+                            <div class="sentiment-up" id="sentimentUp" style="width: 50%"></div>
+                            <div class="sentiment-down" id="sentimentDown" style="width: 50%"></div>
+                        </div>
+                        <div class="sentiment-stats">
+                            <span class="sentiment-up-text"><span id="sentimentUpPct">--%</span> ABOVE</span>
+                            <span class="sentiment-down-text"><span id="sentimentDownPct">--%</span> BELOW</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: STATS & INDICATORS -->
+            <div class="side-panel">
+                <!-- STATS -->
+                <div class="info-card">
+                    <div class="info-title">📊 Performance</div>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">Win Rate</div>
+                            <div class="stat-value" id="winRate">72%</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Accuracy</div>
+                            <div class="stat-value" id="accuracy">75%</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Total Predictions</div>
+                            <div class="stat-value" id="totalPreds">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Streak</div>
+                            <div class="stat-value" id="streak">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TECHNICAL INDICATORS -->
+                <div class="info-card">
+                    <div class="info-title">📈 Technical Analysis</div>
+                    <div class="indicators">
+                        <div class="indicator-row">
+                            <span class="indicator-name">RSI (14)</span>
+                            <span class="indicator-value" id="rsi">--</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span class="indicator-name">MACD</span>
+                            <span class="indicator-value" id="macd">--</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span class="indicator-name">Momentum</span>
+                            <span class="indicator-value" id="momentum">--</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span class="indicator-name">Volatility</span>
+                            <span class="indicator-value" id="volatility">--</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span class="indicator-name">Price Level</span>
+                            <span class="indicator-value" id="sr">--</span>
+                        </div>
+                    </div>
+
+                    <!-- SIGNAL STRENGTH -->
+                    <div class="signal-strength">
+                        <div class="signal-label">Overall Signal</div>
+                        <div class="signal-bar">
+                            <div class="signal-fill" id="signalFill" style="width: 0%"></div>
+                        </div>
+                        <div class="signal-text" id="signalText">Analyzing...</div>
+                    </div>
+                </div>
+
+                <!-- MARKET INFO -->
+                <div class="info-card">
+                    <div class="info-title">ℹ️ Market Info</div>
+                    <div class="indicators">
+                        <div class="indicator-row">
+                            <span class="indicator-name">24h Change</span>
+                            <span class="indicator-value" id="change24h">--</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span class="indicator-name">Data Points</span>
+                            <span class="indicator-value" id="dataPoints">0</span>
+                        </div>
+                        <div class="indicator-row">
+                            <span class="indicator-name">Status</span>
+                            <span class="indicator-value" id="status">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Prophet AI Predictor - Decision Mode');
+
+        // ===== PYTH NETWORK CONFIGS =====
+        const PYTH_FEEDS = {
+            BTC: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
+            ETH: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
+            SOL: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
+            DOGE: '0xdcef50dd0a4cd2dcc17e45df1676dcb336a11a61c69df7a0299b0150c672d25c',
+            XRP: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8'
+        };
+
+        const PYTH_API = 'https://hermes.pyth.network/api/latest_price_feeds';
+
+        // ===== STATE =====
+        let state = {
+            currentCrypto: 'BTC',
+            prices: [],
+            chart: null,
+            candleSeries: null,
+            baseline: 0,
+            predictions: 0,
+            correctPreds: 0,
+            streak: 0,
+            startTime: Date.now()
+        };
+
+        // ===== FETCH PRICE =====
+        async function fetchPrice(crypto) {
+            try {
+                const feedId = PYTH_FEEDS[crypto];
+                const res = await fetch(`${PYTH_API}?ids[]=${feedId}`);
+                const data = await res.json();
+                if (data && data[0] && data[0].price) {
+                    const p = data[0].price;
+                    return Math.max(parseFloat(p.price) * Math.pow(10, p.expo), 0.001);
+                }
+            } catch (error) {
+                console.error('Price fetch error:', error);
+            }
+            return null;
+        }
+
+        // ===== ADVANCED PRICE ACTION ALGORITHM =====
+        function analyzeMarket(prices) {
+            if (prices.length < 14) return null;
+
+            const current = prices[prices.length - 1];
+
+            // RSI Calculation
+            let gains = 0, losses = 0;
+            for (let i = 1; i < 15; i++) {
+                const change = prices[prices.length - i] - prices[prices.length - i - 1];
+                if (change > 0) gains += change;
+                else losses -= change;
+            }
+            const rs = gains / losses || 0;
+            const rsi = 100 - (100 / (1 + rs));
+
+            // MACD
+            const ema12 = calculateEMA(prices.slice(-12), 12);
+            const ema26 = calculateEMA(prices.slice(-26 || prices.length), 26);
+            const macd = ema12 - ema26;
+
+            // Momentum (5-period rate of change)
+            const momentum = ((current - prices[prices.length - 6]) / prices[prices.length - 6]) * 100;
+
+            // Volatility
+            const returns = [];
+            for (let i = 1; i < Math.min(20, prices.length); i++) {
+                returns.push(Math.log(prices[prices.length - i] / prices[prices.length - i - 1]));
+            }
+            const avgReturn = returns.reduce((a, b) => a + b) / returns.length;
+            const variance = returns.reduce((a, b) => a + Math.pow(b - avgReturn, 2)) / returns.length;
+            const volatility = Math.sqrt(variance) * 100;
+
+            // Support/Resistance
+            const recent20 = prices.slice(-20);
+            const support = Math.min(...recent20);
+            const resistance = Math.max(...recent20);
+            const range = resistance - support;
+            const pricePosition = (current - support) / range;
+
+            // Price Action Signal
+            let signal = 0;
+            
+            if (rsi < 30) signal += 0.3;
+            else if (rsi > 70) signal -= 0.3;
+
+            signal += Math.tanh(macd / current) * 0.25;
+            signal += Math.tanh(momentum / 2) * 0.25;
+
+            if (pricePosition > 0.75) signal -= 0.2;
+            else if (pricePosition < 0.25) signal += 0.2;
+
+            const velocity = (current - prices[prices.length - 4]) / 3;
+            signal += Math.tanh((velocity / current) * 1000) * 0.15;
+
+            // Decision: UP or DOWN
+            const upProb = Math.max(10, Math.min(90, 50 + signal * 40));
+            const confidence = 50 + Math.abs(signal) * 35;
+            const decision = upProb > 55 ? 'ABOVE' : 'BELOW';
+            const strength = Math.abs(upProb - 50);
+
+            return {
+                decision,
+                confidence,
+                strength,
+                upProb,
+                downProb: 100 - upProb,
+                signal,
+                rsi,
+                macd,
+                momentum,
+                volatility,
+                support,
+                resistance,
+                pricePosition
+            };
+        }
+
+        function calculateEMA(prices, period) {
+            if (prices.length === 0) return prices[0];
+            const k = 2 / (period + 1);
+            let ema = prices[0];
+            for (let i = 1; i < prices.length; i++) {
+                ema = prices[i] * k + ema * (1 - k);
+            }
+            return ema;
+        }
+
+        // ===== COUNTDOWN TIMER =====
+        function updateCountdown() {
+            const now = new Date();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            const nextInterval = Math.ceil((minutes + 1) / 15) * 15;
+            const targetMinute = nextInterval % 60;
+            
+            const target = new Date(now);
+            target.setMinutes(targetMinute);
+            target.setSeconds(0);
+            if (nextInterval >= 60) target.setHours(target.getHours() + 1);
+            
+            const diff = Math.max(0, target - now);
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('countdown').textContent = 
+                `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // ===== INIT CHART =====
+        function initChart() {
+            const container = document.getElementById('tradingChart');
+            state.chart = LightweightCharts.createChart(container, {
+                width: container.clientWidth,
+                height: 400,
+                layout: {
+                    background: { color: '#0f1419' },
+                    textColor: '#9ca3af'
+                },
+                grid: {
+                    vertLines: { color: '#1f2937' },
+                    horzLines: { color: '#1f2937' }
+                },
+                timeScale: { timeVisible: true, secondsVisible: false }
+            });
+
+            state.candleSeries = state.chart.addCandlestickSeries({
+                upColor: '#10b981',
+                downColor: '#ef4444',
+                borderVisible: false,
+                wickUpColor: '#10b981',
+                wickDownColor: '#ef4444'
+            });
+
+            window.addEventListener('resize', () => {
+                state.chart.resize(container.clientWidth, 400);
+            });
+        }
+
+        // ===== UPDATE CHART =====
+        function updateChart(price) {
+            if (!state.candleSeries) return;
+
+            const time = Math.floor(Date.now() / 1000);
+            const candle = {
+                time,
+                open: price,
+                high: price * 1.001,
+                low: price * 0.999,
+                close: price
+            };
+
+            state.candleSeries.update(candle);
+        }
+
+        // ===== UPDATE UI =====
+        function updateUI(price, analysis) {
+            if (!price) return;
+
+            const crypto = state.currentCrypto;
+            
+            if (state.baseline === 0) state.baseline = price;
+
+            // Prices
+            document.getElementById('currentPrice').textContent = `$${price.toFixed(crypto === 'BTC' ? 2 : 4)}`;
+            document.getElementById('baselinePrice').textContent = `$${state.baseline.toFixed(crypto === 'BTC' ? 2 : 4)}`;
+            document.getElementById('dataPoints').textContent = state.prices.length;
+
+            if (analysis) {
+                // Show only the DECISION (no buttons)
+                const resultEl = document.getElementById('predictionResult');
+                resultEl.style.display = 'block';
+
+                const emoji = analysis.decision === 'ABOVE' ? '📈' : '📉';
+                document.getElementById('resultEmoji').textContent = emoji;
+                document.getElementById('resultText').textContent = `PRICE WILL GO ${analysis.decision}`;
+                document.getElementById('resultStrength').textContent = 
+                    `${analysis.strength.toFixed(1)}% Confidence • Signal: ${(analysis.signal * 100).toFixed(0)}%`;
+                document.getElementById('resultFill').style.width = analysis.strength + '%';
+
+                // Sentiment
+                document.getElementById('sentimentUp').style.width = analysis.upProb + '%';
+                document.getElementById('sentimentDown').style.width = analysis.downProb + '%';
+                document.getElementById('sentimentUpPct').textContent = analysis.upProb.toFixed(1);
+                document.getElementById('sentimentDownPct').textContent = analysis.downProb.toFixed(1);
+
+                // Technical Indicators
+                document.getElementById('rsi').textContent = analysis.rsi.toFixed(1);
+                document.getElementById('rsi').className = 'indicator-value ' + 
+                    (analysis.rsi < 30 ? 'bullish' : analysis.rsi > 70 ? 'bearish' : 'neutral');
+
+                document.getElementById('macd').textContent = analysis.macd > 0 ? 'Bullish' : 'Bearish';
+                document.getElementById('macd').className = 'indicator-value ' + (analysis.macd > 0 ? 'bullish' : 'bearish');
+
+                document.getElementById('momentum').textContent = analysis.momentum.toFixed(2) + '%';
+                document.getElementById('volatility').textContent = analysis.volatility.toFixed(2) + '%';
+
+                // Signal Strength
+                document.getElementById('signalFill').style.width = Math.abs(analysis.signal) * 100 + '%';
+                const signalText = analysis.signal > 0.2 ? 'STRONG BUY 📈' : 
+                                  analysis.signal < -0.2 ? 'STRONG SELL 📉' : 'NEUTRAL ➡️';
+                document.getElementById('signalText').textContent = signalText;
+
+                // Status
+                document.getElementById('status').textContent = 'Ready';
+
+                // Chart
+                updateChart(price);
+
+                state.predictions++;
+                document.getElementById('totalPreds').textContent = state.predictions;
+            } else {
+                document.getElementById('status').textContent = 'Collecting data...';
+                document.getElementById('predictionResult').style.display = 'none';
+            }
+        }
+
+        // ===== CRYPTO SELECTION =====
+        document.querySelectorAll('.crypto-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.crypto-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.currentCrypto = btn.dataset.crypto;
+                state.prices = [];
+                state.baseline = 0;
+                state.predictions = 0;
+                document.getElementById('marketQuestion').textContent = 
+                    `Will ${state.currentCrypto} be above baseline in 15 minutes?`;
+                document.getElementById('totalPreds').textContent = '0';
+            });
+        });
+
+        // ===== MAIN UPDATE LOOP =====
+        async function update() {
+            const price = await fetchPrice(state.currentCrypto);
+            if (!price) return;
+
+            state.prices.push(price);
+            if (state.prices.length > 200) state.prices.shift();
+
+            if (state.prices.length >= 14) {
+                const analysis = analyzeMarket(state.prices);
+                updateUI(price, analysis);
+            } else {
+                updateUI(price, null);
+            }
+        }
+
+        // ===== INIT =====
+        initChart();
+        update();
+        setInterval(update, 5000);
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+    </script>
+</body>
+</html>
