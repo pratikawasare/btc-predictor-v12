@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prophet AI - Live Data with Real Fallbacks</title>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            background: #0a0e1a;
+            color: #e5e7eb;
+        }
+        
+        .container { max-width: 1800px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border-radius: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #1f2937;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-crypto {
+            display: flex;
+            gap: 8px;
+            background: #111827;
+            padding: 6px;
+            border-radius: 10px;
+        }
+        
+        .crypto-btn {
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .crypto-btn:hover { background: #1f2937; color: #e5e7eb; }
+        .crypto-btn.active { background: #10b981; color: white; }
+        
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.warning {
+            background: #f59e0b;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 500px;
+            gap: 24px;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 24px;
+        }
+        
+        .card-title {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #e5e7eb;
+            margin-bottom: 16px;
+        }
+        
+        .chart-container {
+            background: #0f1419;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            height: 400px;
+            border: 1px solid #1f2937;
+        }
+        
+        .market-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #0f1419;
+            border-radius: 12px;
+        }
+        
+        .detail-item { text-align: center; }
+        .detail-label { font-size: 11px; color: #6b7280; }
+        .detail-value { font-size: 20px; font-weight: 700; color: #e5e7eb; margin-top: 4px; }
+        
+        .smart-money-indicator {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+            border: 2px solid rgba(16, 185, 129, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .indicator-emoji { font-size: 80px; margin-bottom: 12px; animation: float 2s ease-in-out infinite; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .indicator-title { font-size: 14px; color: #9ca3af; margin-bottom: 8px; }
+        .indicator-signal { font-size: 36px; font-weight: 900; color: #10b981; margin-bottom: 8px; }
+        .indicator-strength { font-size: 16px; color: #6b7280; margin-bottom: 16px; }
+        
+        .indicator-bar {
+            height: 12px;
+            background: #1f2937;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        
+        .indicator-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            transition: width 0.5s;
+        }
+        
+        .indicator-meta {
+            font-size: 11px;
+            color: #6b7280;
+            padding: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+        
+        .signal-sources {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .source-box {
+            background: #0f1419;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        
+        .source-label { font-size: 10px; color: #6b7280; margin-bottom: 6px; }
+        .source-value { font-size: 24px; font-weight: 800; color: #10b981; }
+        .source-meta { font-size: 10px; color: #4b5563; margin-top: 4px; }
+        
+        .traders-stats {
+            background: #0f1419;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #1f2937;
+        }
+        
+        .stat-row:last-child { border-bottom: none; }
+        
+        .stat-label { font-size: 12px; color: #9ca3af; }
+        .stat-value { font-size: 16px; font-weight: 800; color: #10b981; }
+        
+        .top-traders {
+            background: #0f1419;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .trader-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(16, 185, 129, 0.05);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            border-left: 3px solid #10b981;
+        }
+        
+        .trader-name { color: #e5e7eb; font-weight: 600; }
+        .trader-info { color: #6b7280; }
+        .trader-signal { font-weight: 700; }
+        .trader-up { color: #10b981; }
+        .trader-down { color: #ef4444; }
+        
+        .sentiment-section {
+            background: #0f1419;
+            border-radius: 12px;
+            padding: 14px;
+        }
+        
+        .sentiment-header { font-size: 11px; color: #6b7280; margin-bottom: 10px; }
+        
+        .sentiment-bar {
+            display: flex;
+            height: 10px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .sentiment-up { background: #10b981; }
+        .sentiment-down { background: #ef4444; }
+        
+        .sentiment-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .sentiment-up-text { color: #10b981; }
+        .sentiment-down-text { color: #ef4444; }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .warning-banner {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        
+        .warning-banner.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">⚡ PROPHET AI - REAL DATA + SMART FALLBACK</div>
+            <div class="nav-crypto">
+                <button class="crypto-btn active" data-crypto="BTC">BTC</button>
+                <button class="crypto-btn" data-crypto="ETH">ETH</button>
+                <button class="crypto-btn" data-crypto="SOL">SOL</button>
+                <button class="crypto-btn" data-crypto="DOGE">DOGE</button>
+                <button class="crypto-btn" data-crypto="XRP">XRP</button>
+            </div>
+            <div class="status-badge">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="status">Connecting...</span>
+            </div>
+        </div>
+
+        <div id="warningBanner" class="warning-banner"></div>
+
+        <div class="main-grid">
+            <div>
+                <div class="card">
+                    <div class="card-title">📊 Market Analysis</div>
+                    
+                    <div class="market-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Baseline</div>
+                            <div class="detail-value" id="baseline">$--</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Current</div>
+                            <div class="detail-value" id="current">$--</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Countdown</div>
+                            <div class="detail-value" id="countdown" style="color: #f59e0b;">--:--</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div id="chart"></div>
+                    </div>
+
+                    <div class="signal-sources">
+                        <div class="source-box">
+                            <div class="source-label">🧠 AI Signal</div>
+                            <div class="source-value" id="aiSignal">--</div>
+                            <div class="source-meta" id="aiMeta">--</div>
+                        </div>
+                        <div class="source-box">
+                            <div class="source-label">👥 Traders Data</div>
+                            <div class="source-value" id="tradersSignal">--</div>
+                            <div class="source-meta" id="tradersMeta">--</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="card-title">🎯 Final Consensus</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; height: 32px; border-radius: 10px; overflow: hidden;">
+                            <div style="background: linear-gradient(90deg, #8b5cf6 0%, #6366f1 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 700;" id="aiBar">AI</div>
+                            <div style="background: linear-gradient(90deg, #059669 0%, #10b981 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 700;" id="tradersBar">Traders</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="smart-money-indicator">
+                    <div class="indicator-emoji" id="indicator-emoji">--</div>
+                    <div class="indicator-title">SMART MONEY SIGNAL</div>
+                    <div class="indicator-signal" id="indicator-signal">--</div>
+                    <div class="indicator-strength" id="indicator-strength">-- confidence</div>
+                    <div class="indicator-bar">
+                        <div class="indicator-fill" id="indicator-fill" style="width: 50%"></div>
+                    </div>
+                    <div class="indicator-meta" id="indicator-meta">
+                        Syncing with live data sources...
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 Traders Statistics</div>
+                    <div class="traders-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Total Tracked</span>
+                            <span class="stat-value" id="traderCount">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Avg Position</span>
+                            <span class="stat-value" id="avgPosition">$--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Value</span>
+                            <span class="stat-value" id="totalValue">$--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Data Source</span>
+                            <span class="stat-value" id="dataSource" style="font-size: 12px;">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🏆 Top 10 Traders</div>
+                    <div class="top-traders" id="topTraders">
+                        <div class="loading">🔄 Fetching real trader data...</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔥 Sentiment Heatmap</div>
+                    <div class="sentiment-section">
+                        <div class="sentiment-header">Trader Consensus</div>
+                        <div class="sentiment-bar">
+                            <div class="sentiment-up" id="sentUp" style="flex: 50%"></div>
+                            <div class="sentiment-down" id="sentDown" style="flex: 50%"></div>
+                        </div>
+                        <div class="sentiment-stats">
+                            <span class="sentiment-up-text">📈 <span id="upPct">--%</span></span>
+                            <span class="sentiment-down-text">📉 <span id="downPct">--%</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Prophet AI - Real Data with Smart Fallback (Real Data Only)');
+
+        const PYTH_FEEDS = {
+            BTC: '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
+            ETH: '0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace',
+            SOL: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
+            DOGE: '0xdcef50dd0a4cd2dcc17e45df1676dcb336a11a61c69df7a0299b0150c672d25c',
+            XRP: '0xec5d399846a9209f3fe5881d70aae9268c94339ff9817e8d18ff19fa05eea1c8'
+        };
+
+        // PRIMARY: Limitless Envio API
+        const LIMITLESS_ENVIO_API = 'https://api.envio.dev/v1/limitless-prediction-markets/graphql';
+        
+        // FALLBACK 1: Limitless Official REST API
+        const LIMITLESS_REST_API = 'https://api.limitless.exchange/api/v1';
+        
+        // FALLBACK 2: Base Blockscout GraphQL
+        const BASE_BLOCKSCOUT_API = 'https://base.blockscout.com/graphql';
+
+        let state = {
+            crypto: 'BTC',
+            prices: [],
+            baseline: 0,
+            traders: [],
+            dataSource: 'Unknown',
+            lastApiCall: 0,
+            apiCallInterval: 30000,
+            hasError: false,
+            fallbackAttempt: 0
+        };
+
+        // PRIMARY: Limitless Envio API (Real Data)
+        async function fetchFromEnvio() {
+            const query = `
+                query GetTopTraders {
+                    traders(first: 150, orderBy: "total_position_value") {
+                        id
+                        address
+                        total_position_value
+                        total_trades
+                        winning_trades
+                        recent_positions {
+                            market_id
+                            direction
+                            amount
+                        }
+                    }
+                }
+            `;
+
+            try {
+                console.log('📡 Attempting Limitless Envio API...');
+                const response = await fetch(LIMITLESS_ENVIO_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                if (data.errors) throw new Error(data.errors[0].message);
+                if (data.data?.traders?.length > 0) {
+                    console.log(`✅ Envio API: Got ${data.data.traders.length} traders`);
+                    return {
+                        traders: data.data.traders.map((t, i) => ({
+                            rank: i + 1,
+                            address: t.address.substring(0, 10) + '...',
+                            position: t.total_position_value || 0,
+                            signal: t.recent_positions.filter(p => 
+                                p.direction === 'UP' || p.direction === 'ABOVE'
+                            ).length > t.recent_positions.length / 2 ? 'UP' : 'DOWN',
+                            winRate: t.total_trades ? 
+                                Math.round((t.winning_trades / t.total_trades) * 100) : 0,
+                            totalTrades: t.total_trades || 0
+                        })),
+                        source: 'Limitless Envio API ✅'
+                    };
+                }
+            } catch (error) {
+                console.warn('⚠️ Envio API failed:', error.message);
+            }
+            return null;
+        }
+
+        // FALLBACK 1: Limitless REST API (Real Data)
+        async function fetchFromLimitlessREST() {
+            try {
+                console.log('📡 Attempting Limitless REST API...');
+                const response = await fetch(`${LIMITLESS_REST_API}/leaderboard/top150`, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    console.log(`✅ REST API: Got ${data.length} traders`);
+                    return {
+                        traders: data.slice(0, 150).map((t, i) => ({
+                            rank: i + 1,
+                            address: t.address?.substring(0, 10) + '...' || `Trader #${i+1}`,
+                            position: t.position_size || t.total_volume || 0,
+                            signal: t.recent_bet_direction === 'above' || t.recent_bet_direction === 'yes' ? 'UP' : 'DOWN',
+                            winRate: t.win_rate || 0,
+                            totalTrades: t.total_trades || t.trade_count || 0
+                        })),
+                        source: 'Limitless REST API ✅'
+                    };
+                }
+            } catch (error) {
+                console.warn('⚠️ REST API failed:', error.message);
+            }
+            return null;
+        }
+
+        // FALLBACK 2: Base Blockscout (On-Chain Real Data)
+        async function fetchFromBlockscout() {
+            try {
+                console.log('📡 Attempting Base Blockscout...');
+                // Note: This would require Limitless contract address
+                // For now, returns null (requires contract address)
+                console.warn('⚠️ Blockscout requires contract address');
+            } catch (error) {
+                console.warn('⚠️ Blockscout failed:', error.message);
+            }
+            return null;
+        }
+
+        // Smart fallback system - tries multiple real data sources
+        async function fetchLimitlessTraders() {
+            // Try primary source
+            let result = await fetchFromEnvio();
+            if (result) return result;
+
+            // Try fallback 1
+            result = await fetchFromLimitlessREST();
+            if (result) return result;
+
+            // Try fallback 2
+            result = await fetchFromBlockscout();
+            if (result) return result;
+
+            // No real data available
+            console.error('❌ All real data sources failed');
+            showWarning('⚠️ Unable to fetch real trader data from any source. No predictions available.');
+            return null;
+        }
+
+        function showWarning(msg) {
+            const banner = document.getElementById('warningBanner');
+            banner.textContent = msg;
+            banner.classList.add('show');
+            document.getElementById('statusDot').classList.add('warning');
+        }
+
+        function clearWarning() {
+            const banner = document.getElementById('warningBanner');
+            banner.classList.remove('show');
+            document.getElementById('statusDot').classList.remove('warning');
+        }
+
+        async function fetchPrice(crypto) {
+            try {
+                const res = await fetch(`https://hermes.pyth.network/api/latest_price_feeds?ids[]=${PYTH_FEEDS[crypto]}`);
+                const data = await res.json();
+                if (data && data[0] && data[0].price) {
+                    const p = data[0].price;
+                    return Math.max(parseFloat(p.price) * Math.pow(10, p.expo), 0.001);
+                }
+            } catch (error) {
+                console.error('Price fetch error:', error);
+            }
+            return null;
+        }
+
+        function analyzeAI(prices) {
+            if (prices.length < 14) return 50;
+            const current = prices[prices.length - 1];
+            const recent = prices.slice(-5);
+            let upMoves = 0;
+            for (let i = 1; i < recent.length; i++) {
+                if (recent[i] > recent[i - 1]) upMoves++;
+            }
+            const momentum = upMoves / (recent.length - 1) - 0.5;
+            return Math.max(10, Math.min(90, 50 + momentum * 60));
+        }
+
+        function analyzeTradersSignal(traders) {
+            if (!traders || traders.length === 0) return 50;
+            let totalUp = 0, totalWeight = 0;
+            traders.forEach(t => {
+                totalWeight += t.position;
+                if (t.signal === 'UP') totalUp += t.position;
+            });
+            return totalWeight > 0 ? (totalUp / totalWeight) * 100 : 50;
+        }
+
+        function combineSignals(aiProb, tradersProb) {
+            const combined = aiProb * 0.5 + tradersProb * 0.5;
+            if (combined > 60) {
+                return {
+                    decision: 'WILL GO ABOVE',
+                    emoji: '📈',
+                    confidence: combined - 50,
+                    strength: 'STRONG'
+                };
+            } else if (combined < 40) {
+                return {
+                    decision: 'WILL GO BELOW',
+                    emoji: '📉',
+                    confidence: 50 - combined,
+                    strength: 'STRONG'
+                };
+            } else {
+                return {
+                    decision: 'NEUTRAL',
+                    emoji: '➡️',
+                    confidence: Math.abs(combined - 50),
+                    strength: 'WEAK'
+                };
+            }
+        }
+
+        function updateUI(price) {
+            if (!price) return;
+            if (state.baseline === 0) state.baseline = price;
+
+            document.getElementById('baseline').textContent = `$${state.baseline.toFixed(2)}`;
+            document.getElementById('current').textContent = `$${price.toFixed(2)}`;
+
+            if (state.prices.length >= 14 && state.traders && state.traders.length > 0) {
+                const aiProb = analyzeAI(state.prices);
+                const tradersProb = analyzeTradersSignal(state.traders);
+                const combined = combineSignals(aiProb, tradersProb);
+
+                document.getElementById('aiSignal').textContent = `${aiProb.toFixed(0)}%`;
+                document.getElementById('aiMeta').textContent = aiProb > 60 ? 'Strong Buy' : aiProb < 40 ? 'Strong Sell' : 'Neutral';
+
+                document.getElementById('tradersSignal').textContent = `${tradersProb.toFixed(0)}%`;
+                const upCount = state.traders.filter(t => t.signal === 'UP').length;
+                document.getElementById('tradersMeta').textContent = `${upCount}/${state.traders.length} UP`;
+
+                document.getElementById('indicator-emoji').textContent = combined.emoji;
+                document.getElementById('indicator-signal').textContent = combined.decision;
+                document.getElementById('indicator-strength').textContent = `${combined.confidence.toFixed(0)}% Confidence • ${combined.strength} Signal`;
+                document.getElementById('indicator-fill').style.width = combined.confidence + '%';
+
+                const totalValue = (state.traders.reduce((a, b) => a + b.position, 0) / 1000000).toFixed(1);
+                document.getElementById('indicator-meta').textContent = 
+                    `${state.traders.length} traders • $${totalValue}M • ${state.dataSource}`;
+
+                document.getElementById('traderCount').textContent = state.traders.length;
+                document.getElementById('avgPosition').textContent = `$${(state.traders.reduce((a, b) => a + b.position, 0) / state.traders.length / 1000000).toFixed(2)}M`;
+                document.getElementById('totalValue').textContent = `$${totalValue}M`;
+                document.getElementById('dataSource').textContent = state.dataSource;
+
+                document.getElementById('sentUp').style.flex = tradersProb;
+                document.getElementById('sentDown').style.flex = (100 - tradersProb);
+                document.getElementById('upPct').textContent = tradersProb.toFixed(0);
+                document.getElementById('downPct').textContent = (100 - tradersProb).toFixed(0);
+
+                document.getElementById('status').textContent = `Live • ${state.traders.length} traders • ${state.dataSource}`;
+                clearWarning();
+            }
+        }
+
+        function updateTraders() {
+            if (!state.traders || state.traders.length === 0) {
+                document.getElementById('topTraders').innerHTML = '<div class="loading">⏳ Waiting for real trader data...</div>';
+                return;
+            }
+
+            const top10 = state.traders.slice(0, 10);
+            const html = top10.map((t, i) => `
+                <div class="trader-item">
+                    <div>
+                        <div class="trader-name">#${i+1} ${t.address}</div>
+                        <div class="trader-info">Win: ${t.winRate}% | Trades: ${t.totalTrades}</div>
+                    </div>
+                    <div>
+                        <div class="trader-signal ${t.signal === 'UP' ? 'trader-up' : 'trader-down'}">
+                            ${t.signal === 'UP' ? '📈 UP' : '📉 DOWN'} • $${(t.position / 1000000).toFixed(2)}M
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('topTraders').innerHTML = html;
+        }
+
+        function updateCountdown() {
+            const now = new Date();
+            const nextInterval = Math.ceil((now.getMinutes() + 1) / 15) * 15;
+            const targetMinute = nextInterval % 60;
+            const target = new Date(now);
+            target.setMinutes(targetMinute);
+            target.setSeconds(0);
+            if (nextInterval >= 60) target.setHours(target.getHours() + 1);
+            const diff = Math.max(0, target - now);
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            document.getElementById('countdown').textContent = 
+                `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        let chart = null, candleSeries = null;
+
+        function initChart() {
+            const container = document.getElementById('chart');
+            chart = LightweightCharts.createChart(container, {
+                width: container.clientWidth,
+                height: 400,
+                layout: { background: { color: '#0f1419' }, textColor: '#9ca3af' },
+                grid: { vertLines: { color: '#1f2937' }, horzLines: { color: '#1f2937' } }
+            });
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#10b981',
+                downColor: '#ef4444',
+                borderVisible: false
+            });
+            window.addEventListener('resize', () => {
+                chart.resize(container.clientWidth, 400);
+            });
+        }
+
+        async function update() {
+            const price = await fetchPrice(state.crypto);
+            if (!price) return;
+            state.prices.push(price);
+            if (state.prices.length > 200) state.prices.shift();
+            if (candleSeries) {
+                const time = Math.floor(Date.now() / 1000);
+                candleSeries.update({
+                    time,
+                    open: price,
+                    high: price * 1.001,
+                    low: price * 0.999,
+                    close: price
+                });
+            }
+            updateUI(price);
+
+            // Fetch traders with fallback
+            if (Date.now() - state.lastApiCall > state.apiCallInterval) {
+                const result = await fetchLimitlessTraders();
+                if (result && result.traders && result.traders.length > 0) {
+                    state.traders = result.traders;
+                    state.dataSource = result.source;
+                    updateTraders();
+                    state.lastApiCall = Date.now();
+                }
+            }
+        }
+
+        document.querySelectorAll('.crypto-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.crypto-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.crypto = btn.dataset.crypto;
+                state.prices = [];
+                state.baseline = 0;
+            });
+        });
+
+        // Initialize
+        (async () => {
+            initChart();
+            console.log('🚀 Starting Prophet AI with Real Data + Smart Fallback');
+            
+            // Initial fetch
+            const result = await fetchLimitlessTraders();
+            if (result) {
+                state.traders = result.traders;
+                state.dataSource = result.source;
+                state.lastApiCall = Date.now();
+                updateTraders();
+            }
+
+            update();
+            setInterval(update, 5000);
+            setInterval(updateCountdown, 1000);
+            updateCountdown();
+        })();
+    </script>
+</body>
+</html>
